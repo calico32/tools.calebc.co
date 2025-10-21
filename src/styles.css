@@ -1,0 +1,119 @@
+@import 'tailwindcss';
+@plugin 'phosphor-icons-tailwindcss';
+
+@font-face {
+  src: url('/CommitMono.woff2') format('woff2');
+  font-family: 'CommitMono';
+  font-weight: 200 700;
+  font-feature-settings: 'cv02', 'cv06', 'cv08', 'cv09', 'cv11', 'ss01', 'ss02',
+    'ss03', 'ss04', 'ss05';
+  font-display: swap;
+}
+
+@font-face {
+  src: url('/DMSans.woff2') format('woff2');
+  font-family: 'DM Sans';
+  font-weight: 100 1000;
+  font-style: normal;
+  font-feature-settings: 'opsz' 1;
+  font-display: swap;
+}
+
+@font-face {
+  src: url('/DMSans-Italic.woff2') format('woff2');
+  font-family: 'DM Sans';
+  font-weight: 100 1000;
+  font-style: italic;
+  font-feature-settings: 'opsz' 1;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'CommitMono', monospace;
+}
+
+@utility visually-hidden {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+  margin: -1px;
+}
+
+@custom-variant htmx (&:where(.htmx-request *, &.htmx-request));
+
+:root {
+  --content-width: 65ch;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply overflow-y-scroll font-sans text-zinc-100 bg-zinc-900;
+  display: grid;
+  grid-template-columns: 1fr min(var(--content-width), 100%) 1fr;
+}
+
+main {
+  @apply col-span-1 col-start-2;
+  @apply px-4 mt-4 mb-8 md:mt-16;
+}
+
+:root {
+  --scrollbar-color-thumb: var(--color-zinc-500);
+  --scrollbar-color-track: transparent;
+  --scrollbar-width: thin;
+  --scrollbar-width-legacy: 4px;
+}
+
+@supports (scrollbar-width: auto) {
+  html {
+    scrollbar-color: var(--scrollbar-color-thumb) var(--scrollbar-color-track);
+    scrollbar-width: var(--scrollbar-width);
+  }
+}
+
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-color-thumb);
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-color-track);
+  }
+  ::-webkit-scrollbar {
+    max-width: var(--scrollbar-width-legacy);
+    max-height: var(--scrollbar-width-legacy);
+  }
+}
+
+x-toaster {
+  @apply fixed top-4 left-1/2;
+}
+
+x-toast {
+  @apply absolute transition duration-200 scale-90 -translate-x-1/2 -translate-y-1/2 opacity-0 w-max;
+
+  &.success > * {
+    @apply border-l-4 border-emerald-600;
+  }
+  &.error > * {
+    @apply border-l-4 border-rose-600;
+  }
+  &.info > * {
+    @apply border-l-4 border-sky-600;
+  }
+}
+
+x-toast:state(visible) {
+  @apply scale-100 translate-y-0 opacity-100;
+
+  @starting-style {
+    @apply scale-90 -translate-y-1/2 opacity-0;
+  }
+}

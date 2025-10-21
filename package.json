@@ -1,0 +1,37 @@
+{
+  "name": "calebc.co",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.12",
+    "@types/alpinejs": "3.13.11",
+    "@types/alpinejs__persist": "3.13.4",
+    "@types/bun": "1.2.20",
+    "vite": "7.1.2",
+    "vite-plugin-handlebars": "2.0.0",
+    "vite-plugin-inspect": "11.3.2",
+    "vite-plugin-pwa": "1.0.2"
+  },
+  "peerDependencies": {
+    "typescript": "5.9.2"
+  },
+  "dependencies": {
+    "@alpinejs/persist": "3.14.9",
+    "@date-fns/utc": "^2.1.1",
+    "alpinejs": "3.14.9",
+    "date-fns": "^4.1.0",
+    "ical.js": "^2.2.1",
+    "ics": "^3.8.1",
+    "phosphor-icons-tailwindcss": "^1.2.2",
+    "tailwindcss": "4.1.12",
+    "x-toaster": "^0.1.0",
+    "xlsx": "^0.18.5"
+  },
+  "trustedDependencies": [
+    "@tailwindcss/oxide"
+  ]
+}

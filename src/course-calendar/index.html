@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>course calendar generator | tools.calebc.co</title>
+    <meta
+      name="description"
+      content="generate an .ics calendar for your course schedule"
+    />
+
+    {{>head}}
+  </head>
+  <body>
+    <main>
+      <a
+        href="/"
+        class="flex items-center gap-1 mb-1 text-zinc-500 hover:underline"
+      >
+        <div class="size-4 ph ph-[arrow-left]"></div>
+        home
+      </a>
+      <h1 class="mb-3 text-4xl font-medium">course calendar generator</h1>
+
+      <p class="mb-2 text-sm text-zinc-500">
+        Work in progress! Supports WPI Workday AY 2025-2026 .xlsx imports only.
+        Your changes are saved locally in your browser.
+      </p>
+
+      <p class="mb-4 text-sm text-zinc-500">
+        Contributions welcome! Please suggest improvements or report issues on
+        <a
+          class="text-zinc-400 hover:underline"
+          href="https://github.com/calico32/tools.calebc.co"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub</a
+        >.
+      </p>
+
+      <h2 class="mt-0 mb-0 font-medium text- text-zinc-400">how to use</h2>
+      <p class="mb-1 text-sm text-zinc-500">
+        In Workday, visit <em>Academics</em> > <em>View My Courses</em> and
+        export your course list using the
+        <svg
+          class="inline-block fill-zinc-500 size-5"
+          role="presentation"
+          viewBox="0 0 24 24"
+        >
+          <g class="wd-icon-container">
+            <g>
+              <path
+                d="M22 2.494A.5.5 0 0 0 21.504 2H6.496A.5.5 0 0 0 6 2.494V6.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V4h12v16H8v-2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v4.006c0 .27.222.494.496.494h15.008c.27 0 .496-.221.496-.494z"
+                class="wd-icon-fill"
+              ></path>
+              <path
+                d="M11 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"
+                class="wd-icon-fill"
+              ></path>
+              <path
+                d="M11 11.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"
+                class="wd-icon-fill"
+              ></path>
+              <path
+                d="M11 15.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"
+                class="wd-icon-fill"
+              ></path>
+              <path
+                d="M15 7.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"
+                class="wd-icon-fill"
+              ></path>
+              <path
+                d="M15 11.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"
+                class="wd-icon-fill"
+              ></path>
+              <path
+                d="M15 15.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"
+                class="wd-icon-fill"
+              ></path>
+              <path
+                d="m6.604 8.14-1.239 2.519-1.239-2.52A.25.25 0 0 0 3.902 8H2.288a.25.25 0 0 0-.218.373l2.02 3.593-2.078 3.659a.25.25 0 0 0 .218.373h1.634a.25.25 0 0 0 .224-.139l1.277-2.57 1.277 2.57a.25.25 0 0 0 .224.139h1.64a.25.25 0 0 0 .217-.374l-2.084-3.658 2.026-3.593A.25.25 0 0 0 8.447 8H6.828a.25.25 0 0 0-.224.14Z"
+                class="wd-icon-fill"
+              ></path>
+            </g>
+          </g>
+        </svg>
+        <em>Export to Excel</em> button in the blue header. Download the .xlsx
+        file and use the button below to import it.
+      </p>
+      <p class="mb-1 text-sm text-zinc-500">
+        Alternatively, use the editor below to manually add terms and courses to
+        the calendar.
+      </p>
+      <p class="mb-4 text-sm text-zinc-500">
+        If you're previously exported an .ics calendar on this page, you can
+        restore its configuration by the button below.
+      </p>
+
+      <div x-data="generator" class="space-y-6">
+        <div class="flex flex-wrap items-center gap-2 mb-8">
+          <button
+            class="flex items-center gap-2 px-5 py-2 text-lg font-semibold rounded-md cursor-pointer bg-sky-600/50 hover:bg-sky-500/50"
+            x-on:click="selectExcelFile()"
+          >
+            <div class="ph ph-[upload] size-5"></div>
+            import from Workday .xlsx
+          </button>
+          <button
+            class="flex items-center gap-2 px-5 py-2 text-lg rounded-md cursor-pointer bg-zinc-600/50 hover:bg-zinc-600"
+            x-on:click="selectIcsFile()"
+          >
+            <div class="ph ph-[cloud-arrow-up] size-5"></div>
+            restore from .ics
+          </button>
+          <button
+            class="flex items-center gap-2 px-5 py-2 text-lg rounded-md cursor-pointer bg-zinc-600/50 hover:bg-red-500/50"
+            x-on:click="if (confirm('Really reset everything?')) { calendar.terms.splice(0, calendar.terms.length); calendar.name = ''; }"
+          >
+            <div class="ph ph-[trash] size-5"></div>
+            reset everything
+          </button>
+          <button
+            class="flex items-center gap-2 px-5 py-2 text-lg rounded-md cursor-pointer bg-zinc-600/50 hover:bg-zinc-600/50"
+            x-on:click="scrollToBottom()"
+          >
+            <div class="ph ph-[arrow-down] size-5"></div>
+            go to bottom
+          </button>
+        </div>
+
+        <input
+          type="file"
+          class="visually-hidden"
+          x-ref="excelInput"
+          accept=".xlsx"
+          x-on:change="importExcel()"
+        />
+        <input
+          type="file"
+          class="visually-hidden"
+          x-ref="icsInput"
+          accept=".ics"
+          x-on:change="importIcs()"
+        />
+
+        <label class="flex flex-col gap-2">
+          <span class="font-medium text-zinc-400">calendar name</span>
+          <input
+            autocomplete="off"
+            x-model="calendar.name"
+            class="px-4 py-2 rounded-md bg-zinc-700/50"
+          />
+        </label>
+
+        <p class="mb-2 font-medium text-zinc-400">terms</p>
+        <template x-for="(term, index) in Object.values(calendar.terms)">
+          <div
+            class="p-3 space-y-2 text-sm border rounded-md bg-zinc-800/50 border-zinc-700"
+          >
+            <label class="flex items-center justify-between gap-2">
+              <input
+                autocomplete="off"
+                x-model="term.id"
+                placeholder="term name"
+                class="px-3 py-1.5 font-semibold text-lg rounded-md bg-zinc-700/50 max-w-40"
+              />
+              <button
+                class="flex items-center self-stretch justify-center w-10 text-xl rounded-md cursor-pointer bg-zinc-700/50 hover:bg-red-700"
+                x-on:click="if (confirm(`Really delete term ${term.id} (all classes in this term will be deleted too)?`)) calendar.terms.splice(index, 1)"
+              >
+                <div class="ph ph-[trash] size-5"></div>
+              </button>
+            </label>
+
+            <label class="flex items-center gap-2">
+              <span class="font-medium text-zinc-400">from</span>
+              <input
+                autocomplete="off"
+                type="date"
+                x-model="term.start"
+                class="px-3 py-1 rounded-md bg-zinc-700/50 w-36"
+              />
+              <span class="font-medium text-zinc-400">to</span>
+              <input
+                autocomplete="off"
+                type="date"
+                x-model="term.end"
+                class="px-3 py-1 rounded-md bg-zinc-700/50 w-36"
+              />
+            </label>
+
+            <template x-for="(date, index) in term.dates">
+              <div class="flex gap-2 ml-4 md:items-center">
+                <span class="font-medium text-zinc-400">on</span>
+                <div class="flex flex-col gap-2 md:contents">
+                  <div class="flex items-center gap-2 md:contents">
+                    <input
+                      autocomplete="off"
+                      type="date"
+                      x-model="date.date"
+                      class="px-3 py-1 rounded-md bg-zinc-700/50 w-36"
+                    />
+                    <button
+                      class="flex items-center justify-center rounded-md cursor-pointer md:hidden hover:text-red-400"
+                      x-on:click="if (confirm(`Really delete date ${date.date}?`)) term.dates.splice(index, 1)"
+                    >
+                      <div class="ph ph-[x] size-4"></div>
+                    </button>
+                  </div>
+
+                  <div class="flex items-center gap-2 md:contents">
+                    <select
+                      class="px-3 py-1 rounded-md w-28 bg-zinc-700/50"
+                      x-model="date.type"
+                    >
+                      <option value="no-class">no class</option>
+                      <option value="follow">follow</option>
+                    </select>
+                    <template x-if="date.type === 'follow'">
+                      <div class="contents">
+                        <select
+                          class="w-32 px-3 py-1 rounded-md bg-zinc-700/50"
+                          x-model="date.weekday"
+                        >
+                          <option value="0">Sunday</option>
+                          <option value="1">Monday</option>
+                          <option value="2">Tuesday</option>
+                          <option value="3">Wednesday</option>
+                          <option value="4">Thursday</option>
+                          <option value="5">Friday</option>
+                          <option value="6">Saturday</option>
+                        </select>
+                        <span class="font-medium text-zinc-400">schedule</span>
+                      </div>
+                    </template>
+                    <template x-if="date.type === 'no-class'">
+                      <div>
+                        <span class="font-medium text-zinc-400">(</span
+                        ><input
+                          autocomplete="off"
+                          type="text"
+                          x-model="date.reason"
+                          placeholder="reason"
+                          class="px-3 py-1 rounded-md bg-zinc-700/50 w-52"
+                        /><span class="font-medium text-zinc-400">)</span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <button
+                  class="items-center justify-center hidden rounded-md cursor-pointer hover:text-red-400 md:block"
+                  x-on:click="if (confirm(`Really delete date ${date.date}?`)) term.dates.splice(index, 1)"
+                >
+                  <div class="ph ph-[x] size-4"></div>
+                </button>
+              </div>
+            </template>
+
+            <template x-for="course in term.courses">
+              <div class="p-2 space-y-2 rounded-md bg-zinc-700/50">
+                <div class="flex items-center gap-2 text-base font-semibold">
+                  <input
+                    autocomplete="off"
+                    type="text"
+                    x-model="course.number"
+                    placeholder="number"
+                    class="w-24 px-3 py-1 rounded-md bg-zinc-600/50"
+                  />
+                  <input
+                    autocomplete="off"
+                    type="text"
+                    x-model="course.name"
+                    placeholder="course name"
+                    class="flex-1 px-3 py-1 rounded-md bg-zinc-600/50 w-36"
+                  />
+                  <button
+                    class="flex items-center self-stretch justify-center w-8 text-xl rounded-md cursor-pointer bg-zinc-600/50 hover:bg-red-700"
+                    x-on:click="if (confirm(`Really delete course ${course.name}?`)) term.courses.splice(index, 1)"
+                  >
+                    <div class="ph ph-[trash] size-4"></div>
+                  </button>
+                </div>
+                <label class="flex items-center gap-2">
+                  <span class="ml-4 font-medium text-zinc-400">location</span>
+                  <input
+                    autocomplete="off"
+                    type="text"
+                    x-model="course.location"
+                    placeholder="location"
+                    class="flex-1 px-3 py-1 rounded-md bg-zinc-600/50"
+                  />
+                </label>
+                <div
+                  class="flex flex-col gap-2 ml-4 md:items-center md:flex-row"
+                >
+                  <div class="flex items-center gap-1">
+                    <template x-for="d in [1, 2, 3, 4, 5]">
+                      <button
+                        class="px-2.5 py-1 rounded-md cursor-pointer hover:brightness-125"
+                        x-on:click="toggleWeekday(d, course.meetingPattern)"
+                        x-bind:class="{
+                          'bg-zinc-600/50': !course.meetingPattern.weekdays.includes(d),
+                          'bg-zinc-200/70 text-zinc-900': course.meetingPattern.weekdays.includes(d),
+                        }"
+                      >
+                        <span x-text="weekdayToString(d, true)"></span>
+                      </button>
+                    </template>
+                  </div>
+                  <div class="flex items-center gap-2 md:contents">
+                    <span class="font-medium text-zinc-400">from</span>
+                    <input
+                      autocomplete="off"
+                      type="time"
+                      x-model="course.meetingPattern.startTime"
+                      step="1800"
+                      class="px-3 py-1 rounded-md w-30 bg-zinc-600/50"
+                    />
+                  </div>
+                  <div class="flex items-center gap-2 md:contents">
+                    <span class="font-medium text-zinc-400">to</span>
+                    <input
+                      autocomplete="off"
+                      type="time"
+                      x-model="course.meetingPattern.endTime"
+                      step="1800"
+                      class="px-3 py-1 rounded-md w-30 bg-zinc-600/50"
+                    />
+                    <button
+                      class="px-3 py-1 -ml-1 rounded-md cursor-pointer hover:brightness-125"
+                      x-on:click="course.meetingPattern.endTime = addMinutes(course.meetingPattern.startTime, 50)"
+                      x-bind:class="course.meetingPattern.endTime === addMinutes(course.meetingPattern.startTime, 50) ? 'bg-zinc-200/70 text-zinc-900' : 'bg-zinc-600/50'"
+                    >
+                      50m
+                    </button>
+                    <button
+                      class="px-3 py-1 -ml-1 rounded-md cursor-pointer hover:brightness-125"
+                      x-on:click="course.meetingPattern.endTime = addMinutes(course.meetingPattern.startTime, 110)"
+                      x-bind:class="course.meetingPattern.endTime === addMinutes(course.meetingPattern.startTime, 110) ? 'bg-zinc-200/70 text-zinc-900' : 'bg-zinc-600/50'"
+                    >
+                      1h50m
+                    </button>
+                  </div>
+                </div>
+
+                <template x-for="subsection in course.subsections">
+                  <div class="my-4 ml-4 space-y-2">
+                    <div class="flex items-center gap-2">
+                      <input
+                        autocomplete="off"
+                        type="text"
+                        x-model="subsection.name"
+                        placeholder="type"
+                        class="w-24 px-3 py-1 rounded-md bg-zinc-600/50"
+                      />
+                      <span class="font-medium text-zinc-400">in</span>
+                      <input
+                        autocomplete="off"
+                        type="text"
+                        x-model="subsection.location"
+                        placeholder="location"
+                        class="flex-1 px-3 py-1 rounded-md bg-zinc-600/50"
+                      />
+                      <button
+                        class="flex items-center self-stretch justify-center mr-2 text-xl rounded-md cursor-pointer text-zinc-300 hover:text-red-400"
+                        x-on:click="if (confirm(`Really delete component ${subsection.name}?`)) course.subsections.splice(index, 1)"
+                      >
+                        <div class="ph ph-[x] size-4"></div>
+                      </button>
+                    </div>
+
+                    <div
+                      class="flex flex-col gap-2 md:flex-row md:items-center"
+                    >
+                      <div class="flex items-center gap-1">
+                        <template x-for="d in [1, 2, 3, 4, 5]">
+                          <button
+                            class="px-2.5 py-1 rounded-md cursor-pointer hover:brightness-125"
+                            x-on:click="toggleWeekday(d, subsection.meetingPattern)"
+                            x-bind:class="subsection.meetingPattern.weekdays.includes(d) ? 'bg-zinc-200/70 text-zinc-900' : 'bg-zinc-600/50'"
+                          >
+                            <span x-text="weekdayToString(d, true)"></span>
+                          </button>
+                        </template>
+                      </div>
+                      <div class="flex items-center gap-2 md:contents">
+                        <span class="font-medium text-zinc-400">from</span>
+                        <input
+                          autocomplete="off"
+                          type="time"
+                          x-model="subsection.meetingPattern.startTime"
+                          step="1800"
+                          class="px-3 py-1 rounded-md w-30 bg-zinc-600/50"
+                        />
+                      </div>
+                      <div class="flex items-center gap-2 md:contents">
+                        <span class="font-medium text-zinc-400">to</span>
+                        <input
+                          autocomplete="off"
+                          type="time"
+                          x-model="subsection.meetingPattern.endTime"
+                          step="1800"
+                          class="px-3 py-1 rounded-md w-30 bg-zinc-600/50"
+                        />
+                        <button
+                          class="px-3 py-1 -ml-1 rounded-md cursor-pointer hover:brightness-125"
+                          x-on:click="subsection.meetingPattern.endTime = addMinutes(subsection.meetingPattern.startTime, 50)"
+                          x-bind:class="subsection.meetingPattern.endTime === addMinutes(subsection.meetingPattern.startTime, 50) ? 'bg-zinc-200/70 text-zinc-900' : 'bg-zinc-600/50'"
+                        >
+                          50m
+                        </button>
+                        <button
+                          class="px-3 py-1 -ml-1 rounded-md cursor-pointer hover:brightness-125"
+                          x-on:click="subsection.meetingPattern.endTime = addMinutes(subsection.meetingPattern.startTime, 110)"
+                          x-bind:class="subsection.meetingPattern.endTime === addMinutes(subsection.meetingPattern.startTime, 110) ? 'bg-zinc-200/70 text-zinc-900' : 'bg-zinc-600/50'"
+                        >
+                          1h50m
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+
+                <template x-for="(date, index) in course.except">
+                  <div class="flex items-center gap-2 ml-4 md:items-center">
+                    <span class="font-medium text-zinc-400"
+                      >no meetings on</span
+                    >
+                    <input
+                      autocomplete="off"
+                      type="date"
+                      x-model="course.except[index]"
+                      class="px-3 py-1 rounded-md bg-zinc-600/50 w-36"
+                    />
+                    <button
+                      class="flex items-center justify-center rounded-md cursor-pointer hover:text-red-400"
+                      x-on:click="if (confirm(`Really delete date ${date}?`)) course.except.splice(index, 1)"
+                    >
+                      <div class="ph ph-[x] size-4"></div>
+                    </button>
+                  </div>
+                </template>
+
+                <div class="flex items-center gap-2 ml-4">
+                  <button
+                    class="flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer bg-zinc-600/50 hover:bg-zinc-600"
+                    x-on:click="addSubsection(course)"
+                  >
+                    <div class="ph ph-[plus] size-4"></div>
+                    component
+                  </button>
+                  <button
+                    class="flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer bg-zinc-600/50 hover:bg-zinc-600"
+                    x-on:click="course.except.push('')"
+                  >
+                    <div class="ph ph-[plus] size-4"></div>
+                    special date
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <div class="flex items-center gap-2">
+              <button
+                class="flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+                x-on:click="addCourse(term)"
+              >
+                <div class="ph ph-[plus] size-4"></div>
+                course
+              </button>
+              <button
+                class="flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+                x-on:click="addSpecialDate(term)"
+              >
+                <div class="ph ph-[plus] size-4"></div>
+                special date
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+            x-on:click="addDefaultTerms"
+          >
+            <div class="ph ph-[plus] size-4"></div>
+            WPI 2025-2026 terms
+          </button>
+          <button
+            class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+            x-on:click="addSummerTerms"
+          >
+            <div class="ph ph-[plus] size-4"></div>
+            WPI 2026 E term
+          </button>
+          <button
+            class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+            x-on:click="addTerm"
+          >
+            <div class="ph ph-[plus] size-4"></div>
+            custom term
+          </button>
+        </div>
+
+        <template x-if="errors.length && !ical">
+          <div class="space-y-2 text-red-400 min-h-72">
+            <div class="flex items-center gap-2">
+              <div class="ph ph-[x] size-4"></div>
+              <span
+                >Found
+                <span
+                  x-text="errors.length + ' error' + (errors.length == 1 ? '' : 's')"
+                ></span
+                >:</span
+              >
+            </div>
+            <template x-for="error in errors">
+              <p x-text="error"></p>
+            </template>
+          </div>
+        </template>
+        <template x-if="!errors.length && ical">
+          <div class="space-y-3 min-h-72">
+            <div class="flex items-center gap-2 text-green-400">
+              <div class="ph ph-[check] size-4"></div>
+              <span>Generation succeeded.</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                class="flex items-center gap-2 px-5 py-2 text-lg font-semibold rounded-md cursor-pointer bg-sky-600/50 hover:bg-sky-500/50"
+                x-on:click="downloadICal()"
+              >
+                <div class="ph ph-[download] size-5"></div>
+                download .ics
+              </button>
+              <button
+                class="flex items-center gap-2 px-5 py-2 text-lg rounded-md cursor-pointer bg-zinc-600/50 hover:bg-zinc-600"
+                x-on:click="copyICal()"
+              >
+                <div class="ph ph-[clipboard] size-5"></div>
+                copy to clipboard
+              </button>
+
+              <button
+                class="flex items-center gap-2 px-5 py-2 text-lg rounded-md cursor-pointer bg-zinc-600/50 hover:bg-zinc-600"
+                x-on:click="scrollToTop()"
+              >
+                <div class="ph ph-[arrow-up] size-5"></div>
+                return to top
+              </button>
+            </div>
+            <p class="text-sm text-zinc-300">
+              Upload to your calendar application of choice. Your .ics file can
+              also be reuploaded at the top of this page to restore your
+              configuration.
+            </p>
+            <p class="mb-2 text-sm font-medium text-zinc-400">raw ICS data</p>
+            <pre
+              x-text="ical"
+              class="h-48 p-4 overflow-y-scroll font-mono text-xs whitespace-pre-wrap rounded-md text-zinc-200 bg-zinc-700/50"
+            ></pre>
+          </div>
+        </template>
+      </div>
+
+      {{>footer}}
+
+      <template x-toast-template>
+        <div
+          class="px-6 py-2 rounded-md shadow-md cursor-pointer bg-zinc-700"
+          x-close
+        >
+          <div x-title></div>
+          <div x-message class="text-zinc-50"></div>
+        </div>
+      </template>
+    </main>
+
+    <script type="module" src="./entry.ts"></script>
+  </body>
+</html>

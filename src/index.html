@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>tools.calebc.co</title>
+
+    {{>head}}
+  </head>
+  <body>
+    <main>
+      <h1 class="mb-4 text-4xl font-medium">tools.calebc.co</h1>
+
+      <a
+        href="/course-calendar/"
+        class="flex flex-col gap-2 px-8 py-4 border rounded-lg shadow-md border-zinc-700 bg-zinc-700/50 hover:bg-zinc-700"
+      >
+        <h2 class="text-2xl font-medium">course calendar generator</h2>
+        <p class="text-zinc-400">
+          Generate an .ics calendar for your course schedule
+        </p>
+      </a>
+
+      {{>footer}}
+    </main>
+
+    <script type="module" src="./entry.ts"></script>
+  </body>
+</html>
