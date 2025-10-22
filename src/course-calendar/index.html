@@ -167,7 +167,10 @@
         </label>
 
         <p class="mb-2 font-medium text-zinc-400">terms</p>
-        <template x-for="(term, index) in Object.values(calendar.terms)">
+        <template
+          x-for="(term, index) in Object.values(calendar.terms)"
+          :key="index"
+        >
           <div
             class="p-3 space-y-2 text-sm border rounded-md bg-zinc-800/50 border-zinc-700"
           >
@@ -293,7 +296,7 @@
               </template>
             </details>
 
-            <template x-for="course in term.courses">
+            <template x-for="(course, index) in term.courses" :key="index">
               <div class="p-2 space-y-2 rounded-md bg-zinc-700/50">
                 <div class="flex items-center gap-2 text-base font-semibold">
                   <input
