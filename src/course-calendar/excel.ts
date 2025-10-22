@@ -1,27 +1,50 @@
 import { UTCDate } from '@date-fns/utc'
-import { addDays, isBefore, parse } from 'date-fns'
+import { addDays, formatDate, isBefore, parse } from 'date-fns'
 import type { Sheet } from 'xlsx'
 import { academicCalendars, type AcademicCalendar } from './data'
 import {
   parseMeetingPattern,
   type CalendarCourse,
+  type CalendarTerm,
   type MeetingPattern,
 } from './types'
 
+interface CourseData {
+  term: CalendarTerm
+  courseNameNumber: string
+  courseSection: string
+  registrationStatus: string
+  instructionalFormat: string
+  meetingPatterns: MeetingPattern[]
+  startDate: UTCDate
+  endDate: UTCDate
+}
+
 /**
- * parseExcelCalendar parses an Excel file exported from Workday into a
- * calendar object. It only processes enrolled and completed courses and
- * ignores others. It supports WPI exports only.
+ * parseExcelCalendar parses an Excel file exported from Workday into a calendar
+ * object. It only processes enrolled and completed courses and ignores others.
+ * It supports WPI exports only.
+ *
+ * parseExcelCalendar dynamically imports xlsx (~500KB of js). If it is known
+ * that the user is calling this function ahead of time, it is recommended to
+ * import xlsx inline as `import('xlsx')` to start the download early.
  */
-export async function parseExcelCalendar(
-  xlsxData: any
-): Promise<AcademicCalendar | Error> {
+export async function parseExcelCalendar(xlsxData: any): Promise<
+  | {
+      calendar: AcademicCalendar
+      warnings: { title: string; message: string }[]
+      error: null
+    }
+  | { error: Error }
+> {
   const { read } = await import('xlsx')
   const workbook = read(xlsxData)
   if (workbook.SheetNames.length !== 1) {
-    return new Error(
-      'Excel file must contain exactly one sheet. Please check that your export is from the correct page.'
-    )
+    return {
+      error: new Error(
+        'Excel file must contain exactly one sheet. Please check that your export is from the correct page.'
+      ),
+    }
   }
 
   const sheet = await sheetToArray(
@@ -34,15 +57,22 @@ export async function parseExcelCalendar(
     sheet[0][0] !== 'View My Courses' &&
     sheet[0][0] !== 'My Enrolled Courses'
   ) {
-    return new Error(
-      'Expected first cell to be "View My Courses" or "My Enrolled Courses". Please check that your export is from the correct page.'
-    )
+    return {
+      error: new Error(
+        'Expected first cell to be "View My Courses" or "My Enrolled Courses". Please check that your export is from the correct page.'
+      ),
+    }
   }
+
+  const warnings: { title: string; message: string }[] = []
+
+  let calendar: AcademicCalendar | null = null
+  let isCustomCalendar = false
 
   let sectionType = null
   let index = defaultIndices()
   let parseIndices = false
-  let calendar: AcademicCalendar | null = null
+  let pendingSubsections: CourseData[] = []
   for (const [i, row] of sheet.entries()) {
     switch (row[0]) {
       case 'My Enrolled Courses':
@@ -98,6 +128,12 @@ export async function parseExcelCalendar(
         )
         console.warn(row)
         console.warn(index)
+        warnings.push({
+          title: `Possibly missing data for ${sectionType} section at row ${
+            i + 1
+          }`,
+          message: 'Check courses for missing data.',
+        })
       }
 
       parseIndices = false
@@ -148,6 +184,10 @@ export async function parseExcelCalendar(
       )
       console.warn(row)
       console.warn(index)
+      warnings.push({
+        title: `Missing data for course ${courseSection} at row ${i + 1}`,
+        message: 'Add this course to the calendar manually.',
+      })
       continue
     }
 
@@ -158,9 +198,22 @@ export async function parseExcelCalendar(
           isBefore(endDate, addDays(cal.range[1], 1))
         ) {
           console.debug(`Matched WPI calendar ${cal.name}`)
-          calendar = cal
+          calendar = structuredClone(cal)
           break
         }
+      }
+
+      if (!calendar) {
+        console.warn(
+          `Warning: no matching calendar found, creating blank calendar`
+        )
+        calendar = {
+          name: 'Imported Course Calendar',
+          year: [new Date().getFullYear(), new Date().getFullYear()],
+          range: [startDate, endDate],
+          terms: [],
+        }
+        isCustomCalendar = true
       }
     }
 
@@ -173,76 +226,72 @@ export async function parseExcelCalendar(
       )
     }
 
-    if (!calendar) {
-      console.warn(
-        `Warning: no matching calendar found, can't process course ${courseSection}`
-      )
-      continue
-    }
-
     console.debug(`Found course ${courseSection}`)
 
-    let term = null
+    let term: CalendarTerm | undefined = calendar.terms.find(
+      (t) =>
+        isBefore(new UTCDate(t.start), addDays(startDate, 1)) &&
+        isBefore(endDate, addDays(new UTCDate(t.end), 1))
+    )
     for (const t of calendar.terms) {
       if (
         isBefore(new UTCDate(t.start), addDays(startDate, 1)) &&
         isBefore(endDate, addDays(new UTCDate(t.end), 1))
       ) {
-        console.debug(`  Matched term ${t.id}`)
         term = t
         break
       }
     }
-    if (!term) {
+    if (term) {
+      console.debug(`  Matched term ${term.id}`)
+    } else if (isCustomCalendar) {
+      // add a new term to the calendar
+      term = {
+        id: 'Custom',
+        start: formatDate(startDate, 'yyyy-MM-dd'),
+        end: formatDate(endDate, 'yyyy-MM-dd'),
+        dates: [],
+        courses: [],
+      }
+      calendar!.terms.push(term)
+    } else {
       console.warn(
         `Warning: no matching term found, can't process course ${courseSection}`
       )
+      warnings.push({
+        title: `Couldn't match term for course ${courseSection}`,
+        message: 'Add this course to the calendar manually.',
+      })
+      continue
+    }
+
+    if (meetingPatterns.some((err) => err instanceof Error)) {
+      console.warn(
+        `Warning: failed to parse meeting patterns for course ${courseSection}`
+      )
+      console.warn(meetingPatterns)
+      warnings.push({
+        title: `Failed to parse meeting patterns for course ${courseSection}`,
+        message: 'Add this course to the calendar manually.',
+      })
       continue
     }
 
     const [courseNumber, courseName] = courseNameNumber.split(' - ')
 
-    if (meetingPatterns.some(([err]) => err instanceof Error)) {
-      console.warn(
-        `Warning: failed to parse meeting pattern sfor course ${courseNameNumber}`
-      )
-      console.warn(meetingPatterns)
-      continue
-    }
-
-    if (instructionalFormat !== 'Lecture') {
-      let course = term.courses.find(
-        (c) => c.number === courseNumber && c.name === courseName
-      )
-      if (!course) {
-        console.warn(
-          `Warning: course ${courseNameNumber} not found in term ${term.id}`
-        )
-        continue
-      }
-      console.debug(`  Matched course ${courseNameNumber}`)
-
-      let name = courseSection.split(' - ')[0].split('-')[1]
-      if (
-        name[0] === 'A' ||
-        name[0] === 'B' ||
-        name[0] === 'C' ||
-        name[0] === 'D'
-      ) {
-        name =
-          {
-            L: 'Lecture',
-            D: 'Discussion',
-            X: 'Laboratory',
-            R: 'Recitation',
-          }[name[1]] ?? name
-      }
-
-      course.subsections.push({
-        name,
-        location: meetingPatterns[0][1]!,
-        meetingPattern: meetingPatterns[0][0] as MeetingPattern,
-        except: [],
+    if (
+      instructionalFormat !== 'Lecture' &&
+      instructionalFormat !== 'Workshop'
+    ) {
+      pendingSubsections.push({
+        term,
+        courseNameNumber,
+        courseSection,
+        registrationStatus,
+        instructionalFormat,
+        meetingPatterns: meetingPatterns as MeetingPattern[],
+        startDate,
+        endDate,
       })
       continue
     }
@@ -250,51 +299,117 @@ export async function parseExcelCalendar(
     const course: CalendarCourse = {
       name: courseName,
       number: courseNumber,
-      meetingPattern: meetingPatterns[0][0] as MeetingPattern,
-      location: meetingPatterns[0][1]!,
+      meetingPatterns: meetingPatterns as MeetingPattern[],
       subsections: [],
       except: [],
     }
-
-    // TODO: handle multiple meeting patterns more elegantly
-    if (meetingPatterns.length > 1) {
-      for (const [mp, location] of meetingPatterns.slice(1)) {
-        let name = courseSection.split(' - ')[0].split('-')[1]
-        if (
-          name[0] === 'A' ||
-          name[0] === 'B' ||
-          name[0] === 'C' ||
-          name[0] === 'D'
-        ) {
-          name =
-            {
-              L: 'Lecture',
-              D: 'Discussion',
-              X: 'Laboratory',
-              R: 'Recitation',
-              0: 'Lecture',
-              1: 'Lecture',
-            }[name[1]] ?? name
-        }
-
-        course.subsections.push({
-          name,
-          location: location!,
-          meetingPattern: mp as MeetingPattern,
-          except: [],
-        })
-      }
+    if (!meetingPatterns.length) {
+      warnings.push({
+        title: `No meeting patterns found for course ${courseSection}`,
+        message: `Add a meeting pattern for this course to the calendar manually, if applicable. It will be ignored otherwise.`,
+      })
     }
+
     term.courses.push(course)
+  }
+
+  // process pending subsections
+  for (const s of pendingSubsections) {
+    const [courseNumber, courseName] = s.courseNameNumber.split(' - ')
+
+    const name = extractSubsectionName(s.courseSection)
+
+    let courses = s.term.courses.filter((c) => c.number === courseNumber)
+    if (!courses.length) {
+      console.warn(
+        `Warning: course ${s.courseNameNumber} not found in term ${s.term.id}`
+      )
+      warnings.push({
+        title: `Couldn't find parent course ${s.courseNameNumber} in term ${s.term.id}`,
+        message: `Add the ${name} section for this course to the calendar manually.`,
+      })
+      continue
+    }
+    const course = courses.find((c) => c.name === courseName) ?? courses[0]
+    console.debug(`  Matched course ${s.courseNameNumber}`)
+
+    course.subsections.push({
+      name,
+      meetingPatterns: s.meetingPatterns,
+      except: [],
+    })
   }
 
   // remove empty terms
   calendar!.terms = calendar!.terms.filter((t) => t.courses.length > 0)
+  if (!calendar!.terms.length) {
+    return {
+      error: new Error(
+        'No courses found. Check that your export is from the correct page.'
+      ),
+    }
+  }
 
-  return calendar ?? new Error('No matching WPI academic calendar found')
+  // fix custom calendar range and term IDs
+  if (isCustomCalendar && calendar) {
+    let start = calendar.terms[0].start
+    let end = calendar.terms[0].end
+    for (const term of calendar.terms) {
+      if (term.start < start) {
+        start = term.start
+      }
+      if (term.end > end) {
+        end = term.end
+      }
+    }
+    calendar.range = [new UTCDate(start), new UTCDate(end)]
+
+    calendar.terms.sort((a, b) => a.start.localeCompare(b.start))
+    for (const [i, term] of calendar!.terms.entries()) {
+      term.id = `Term ${i + 1}`
+    }
+
+    calendar.year = [
+      calendar.range[0].getFullYear(),
+      calendar.range[1].getFullYear(),
+    ]
+  }
+
+  if (isCustomCalendar) {
+    warnings.unshift({
+      title: "Warning: couldn't match a known WPI academic calendar",
+      message:
+        'Check term dates for accuracy and add term names, holidays, exceptions to the calendar manually.',
+    })
+  }
+
+  return {
+    calendar: calendar!,
+    warnings,
+    error: null,
+  }
 }
 
 const cellAddressRegex = /([A-Z]+)([0-9]+)/
+
+function extractSubsectionName(courseSection: string) {
+  let name = courseSection.split(' - ')[0].split('-')[1]
+  if (
+    name[0] === 'A' ||
+    name[0] === 'B' ||
+    name[0] === 'C' ||
+    name[0] === 'D'
+  ) {
+    name =
+      {
+        L: 'Lecture',
+        D: 'Discussion',
+        X: 'Laboratory',
+        R: 'Recitation',
+      }[name[1]] ?? name
+  }
+  return name
+}
 
 /**
  * fixSheetRef fixes the !ref property of a sheet to match the actual sheet

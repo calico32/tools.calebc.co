@@ -1,0 +1,63 @@
+<div class="flex flex-col gap-2 ml-4 md:items-center md:flex-row">
+  <div class="flex items-center gap-1">
+    <template x-for="d in [1, 2, 3, 4, 5]">
+      <button
+        class="px-2.5 py-1 rounded-md cursor-pointer hover:brightness-125"
+        x-on:click="toggleWeekday(d, mp)"
+        x-bind:class="{
+          'bg-zinc-600/50': !mp.weekdays.includes(d),
+          'bg-zinc-200/70 text-zinc-900': mp.weekdays.includes(d),
+        }"
+      >
+        <span x-text="weekdayToString(d, true)"></span>
+      </button>
+    </template>
+    <button
+      class="flex items-center justify-center ml-2 rounded-md cursor-pointer hover:text-red-400 md:hidden"
+      x-on:click="if (isEmptyMeetingPattern(mp) || confirm(`Really delete meeting pattern?`)) mps.splice(index, 1)"
+    >
+      <div class="ph ph-[x] size-4"></div>
+    </button>
+  </div>
+
+  <div class="flex items-center gap-2 ml-4 md:contents">
+    <span class="font-medium text-zinc-400">from</span>
+    <input
+      autocomplete="off"
+      type="time"
+      x-model="mp.startTime"
+      step="1800"
+      class="px-3 py-1 rounded-md w-30 bg-zinc-600/50"
+    />
+  </div>
+  <div class="flex items-center gap-2 ml-4 md:contents">
+    <span class="font-medium text-zinc-400">to</span>
+    <input
+      autocomplete="off"
+      type="time"
+      x-model="mp.endTime"
+      step="1800"
+      class="px-3 py-1 rounded-md w-30 bg-zinc-600/50"
+    />
+    <button
+      class="px-3 py-1 -ml-1 rounded-md cursor-pointer hover:brightness-125"
+      x-on:click="mp.endTime = addMinutes(mp.startTime, 50)"
+      x-bind:class="mp.endTime === addMinutes(mp.startTime, 50) ? 'bg-zinc-200/70 text-zinc-900' : 'bg-zinc-600/50'"
+    >
+      50m
+    </button>
+    <button
+      class="px-3 py-1 -ml-1 rounded-md cursor-pointer hover:brightness-125"
+      x-on:click="mp.endTime = addMinutes(mp.startTime, 110)"
+      x-bind:class="mp.endTime === addMinutes(mp.startTime, 110) ? 'bg-zinc-200/70 text-zinc-900' : 'bg-zinc-600/50'"
+    >
+      1h50m
+    </button>
+  </div>
+  <button
+    class="items-center justify-center hidden mr-4 rounded-md cursor-pointer md:flex hover:text-red-400"
+    x-on:click="if (isEmptyMeetingPattern(mp) || confirm(`Really delete meeting pattern?`)) mps.splice(index, 1)"
+  >
+    <div class="ph ph-[x] size-4"></div>
+  </button>
+</div>

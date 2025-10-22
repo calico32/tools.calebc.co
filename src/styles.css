@@ -47,7 +47,7 @@
 @custom-variant htmx (&:where(.htmx-request *, &.htmx-request));
 
 :root {
-  --content-width: 65ch;
+  --content-width: 70ch;
 }
 
 html {
@@ -107,6 +107,9 @@ x-toast {
   }
   &.info > * {
     @apply border-l-4 border-sky-600;
+  }
+  &.warning > * {
+    @apply border-l-4 border-amber-600;
   }
 }
 

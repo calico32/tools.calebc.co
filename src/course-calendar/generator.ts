@@ -1,33 +1,38 @@
 import { UTCDate } from '@date-fns/utc'
 import type { AlpineComponent } from 'alpinejs'
-import { addDays, addMinutes, formatDate, isBefore } from 'date-fns'
-import * as ics from 'ics'
+import { addDays, addMinutes, format as formatDate, isBefore } from 'date-fns'
+import { type EventAttributes, createEvents } from 'ics'
 import * as toaster from 'x-toaster'
 import type { AlpineThis, Persist } from '../types'
 import { academicCalendars } from './data'
 import { parseExcelCalendar } from './excel'
 import {
-  weekdayToString,
   type Calendar,
   type CalendarCourse,
+  type CalendarDate,
+  type CalendarSection,
   type CalendarTerm,
   type MeetingPattern,
   type Weekday,
+  emptyMeetingPattern,
+  isEmptyMeetingPattern,
+  weekdayToString,
 } from './types'
+import { validate } from './validate'
 
-class Generator implements AlpineComponent<Generator> {
-  // calendar will be created by the Alpine factory using $persist so we don't
-  // initialize it in the constructor here.
-  calendar!: Persist<Calendar>
-  errors: string[]
-  ical: string | null
+export class Generator implements AlpineComponent<Generator> {
+  calendar: Persist<Calendar>
+  errors: string[] = []
+  ical: string | null = null
+  importWarnings: Persist<{ title: string; message: string }[]>
+  generateWarnings: { title: string; message: string }[] = []
+
   constructor(alpine: AlpineThis<Generator>) {
     this.calendar = alpine.$persist({
       name: '',
       terms: [],
     })
-    this.errors = []
-    this.ical = null
+    this.importWarnings = alpine.$persist([])
   }
 
   init(this: AlpineThis<Generator>): void {
@@ -45,6 +50,15 @@ class Generator implements AlpineComponent<Generator> {
       this.generateICal()
     })
     this.generateICal()
+  }
+
+  /** reset resets the calendar to its initial state. */
+  reset(this: AlpineThis<Generator>): void {
+    this.calendar = { name: '', terms: [] }
+    this.importWarnings = []
+    this.generateWarnings = []
+    this.ical = null
+    this.errors = []
   }
 
   /** addTerm adds an empty term to the calendar. */
@@ -73,11 +87,18 @@ class Generator implements AlpineComponent<Generator> {
     term.courses.push({
       name: '',
       number: '',
-      location: '',
-      meetingPattern: { startTime: '', endTime: '', weekdays: [] },
+      meetingPatterns: [emptyMeetingPattern()],
       except: [],
       subsections: [],
     })
+  }
+
+  /** addMeetingPattern adds an empty meeting pattern to the given course/subsection. */
+  addMeetingPattern(
+    this: AlpineThis<Generator>,
+    component: CalendarCourse | CalendarSection
+  ): void {
+    component.meetingPatterns.push(emptyMeetingPattern())
   }
 
   /** addSpecialDate adds a special date to the given term. */
@@ -89,8 +110,7 @@ class Generator implements AlpineComponent<Generator> {
   addSubsection(this: AlpineThis<Generator>, course: CalendarCourse): void {
     course.subsections.push({
       name: '',
-      location: '',
-      meetingPattern: { startTime: '', endTime: '', weekdays: [] },
+      meetingPatterns: [emptyMeetingPattern()],
       except: [],
     })
   }
@@ -122,170 +142,17 @@ class Generator implements AlpineComponent<Generator> {
   /** weekdayToString converts a weekday to a string. */
   weekdayToString = weekdayToString
 
-  /** validate returns a list of errors in the calendar. */
-  validate(this: AlpineThis<Generator>): string[] {
-    const errors: string[] = []
-
-    if (!this.calendar.terms.length) {
-      errors.push(`No terms defined.`)
-    }
-
-    if (!this.calendar.terms.flatMap((term) => term.courses).length) {
-      errors.push(`No courses defined.`)
-    }
-
-    const termNames = new Set<string>()
-    for (const [index, term] of this.calendar.terms.entries()) {
-      const termName = term.id || '#' + (index + 1)
-      if (!term.id) {
-        errors.push(`Term ${termName}: missing/invalid name`)
-      }
-      if (termNames.has(term.id)) {
-        errors.push(`Term ${termName}: duplicate name`)
-      }
-      termNames.add(term.id)
-      if (!term.start) {
-        errors.push(`Term ${termName}: missing/invalid start date`)
-      }
-      if (!term.end) {
-        errors.push(`Term ${termName}: missing/invalid end date`)
-      }
-      if (term.start && term.end && term.start > term.end) {
-        errors.push(`Term ${termName}: start > end`)
-      }
-      for (const special of term.dates) {
-        if (!special.date) {
-          errors.push(`Term ${termName}: missing/invalid date`)
-        } else {
-          if (special.date < term.start) {
-            errors.push(
-              `Term ${termName}: special date ${special.date} before term start`
-            )
-          } else if (special.date > term.end) {
-            errors.push(
-              `Term ${termName}: special date ${special.date} after term end`
-            )
-          }
-          if (
-            special.type === 'follow' &&
-            new UTCDate(special.date).getDay() == special.weekday
-          ) {
-            errors.push(
-              `Term ${termName}: special date ${
-                special.date
-              } does nothing (already a ${weekdayToString(special.weekday)})`
-            )
-          }
-        }
-      }
-      for (const course of term.courses) {
-        const courseName = course.number || '#' + (index + 1)
-        if (!course.number) {
-          errors.push(
-            `Term ${termName}, course ${courseName}: missing/invalid number`
-          )
-        }
-        if (!course.name) {
-          errors.push(
-            `Term ${termName}, course ${courseName}: missing/invalid name`
-          )
-        }
-        if (!course.location) {
-          errors.push(
-            `Term ${termName}, course ${courseName}: missing/invalid location`
-          )
-        }
-        if (!course.meetingPattern.startTime) {
-          errors.push(
-            `Term ${termName}, course ${courseName}: missing/invalid start time`
-          )
-        }
-        if (!course.meetingPattern.endTime) {
-          errors.push(
-            `Term ${termName}, course ${courseName}: missing/invalid end time`
-          )
-        }
-        if (
-          course.meetingPattern.startTime &&
-          course.meetingPattern.endTime &&
-          course.meetingPattern.startTime > course.meetingPattern.endTime
-        ) {
-          errors.push(`Term ${termName}, course ${courseName}: start > end`)
-        }
-        if (course.meetingPattern.weekdays.length === 0) {
-          errors.push(
-            `Term ${termName}, course ${courseName}: no weekdays selected`
-          )
-        }
-        for (const subsection of course.subsections) {
-          const subsectionName = subsection.name || '#'
-          if (!subsection.name) {
-            errors.push(
-              `Term ${termName}, course ${courseName}, component ${subsectionName}: missing/invalid name`
-            )
-          }
-          if (!subsection.location) {
-            errors.push(
-              `Term ${termName}, course ${courseName}, component ${subsectionName}: missing/invalid location`
-            )
-          }
-          if (!subsection.meetingPattern.startTime) {
-            errors.push(
-              `Term ${termName}, course ${courseName}, component ${subsectionName}: missing/invalid start time`
-            )
-          }
-          if (!subsection.meetingPattern.endTime) {
-            errors.push(
-              `Term ${termName}, course ${courseName}, component ${subsectionName}: missing/invalid end time`
-            )
-          }
-          if (
-            subsection.meetingPattern.startTime &&
-            subsection.meetingPattern.endTime &&
-            subsection.meetingPattern.startTime >
-              subsection.meetingPattern.endTime
-          ) {
-            errors.push(
-              `Term ${termName}, course ${courseName}, component ${subsectionName}: start > end`
-            )
-          }
-          if (subsection.meetingPattern.weekdays.length === 0) {
-            errors.push(
-              `Term ${termName}, course ${courseName}, component ${subsectionName}: no weekdays selected`
-            )
-          }
-        }
-        for (const special of course.except) {
-          if (!special) {
-            errors.push(
-              `Term ${termName}, course ${courseName}: missing/invalid special date`
-            )
-          } else if (special < term.start) {
-            errors.push(
-              `Term ${termName}, course ${courseName}: special date ${special} before term start`
-            )
-          } else if (special > term.end) {
-            errors.push(
-              `Term ${termName}, course ${courseName}: special date ${special} after term end`
-            )
-          }
-        }
-      }
-    }
-
-    return errors
-  }
-
   /** generateICal generates an .ics file from the calendar and stores it. */
   async generateICal(this: AlpineThis<Generator>): Promise<void> {
-    const errors = this.validate()
+    const { errors, warnings } = validate(this.calendar)
     if (errors.length) {
       this.errors = errors
+      this.generateWarnings = warnings
       this.ical = null
       return
     }
 
-    const events: ics.EventAttributes[] = []
+    const events: EventAttributes[] = []
     let i = 0
     for (const term of this.calendar.terms) {
       const end = new UTCDate(term.end)
@@ -299,59 +166,72 @@ class Generator implements AlpineComponent<Generator> {
           this.errors.push('too many events')
           return
         }
+        const uids = new Set<string>()
         let weekday = new UTCDate(d).getDay() as Weekday
         for (const special of term.dates) {
           if (special.date === formatDate(d, 'yyyy-MM-dd')) {
             if (special.type === 'no-class') {
-              events.push({
-                uid: `course-calendar-${special.date}-no-class@tools.calebc.co`,
-                start: toIcsDate(d),
-                end: toIcsDate(addDays(d, 1)),
-                title: special.reason
-                  ? `No Classes (${special.reason})`
-                  : 'No Classes',
-              })
+              const uid = `course-calendar-${special.date}-no-class@tools.calebc.co`
+              if (!uids.has(uid) && !special.hidden) {
+                uids.add(uid)
+                events.push({
+                  uid,
+                  start: toIcsDate(d),
+                  end: toIcsDate(addDays(d, 1)),
+                  title: special.reason
+                    ? `No Classes (${special.reason})`
+                    : 'No Classes',
+                })
+              }
               continue outer
             } else if (special.type === 'follow') {
               weekday = special.weekday
-              events.push({
-                uid: `course-calendar-${special.date}-follow@tools.calebc.co`,
-                start: toIcsDate(d),
-                end: toIcsDate(addDays(d, 1)),
-                title: `Follow ${weekdayToString(weekday)} Schedule`,
-              })
+              const uid = `course-calendar-${special.date}-follow@tools.calebc.co`
+              if (!uids.has(uid)) {
+                uids.add(uid)
+                events.push({
+                  uid,
+                  start: toIcsDate(d),
+                  end: toIcsDate(addDays(d, 1)),
+                  title: `Follow ${weekdayToString(weekday)} Schedule`,
+                })
+              }
               break
             }
           }
         }
         for (const course of term.courses) {
-          if (course.meetingPattern.weekdays.includes(weekday)) {
-            events.push({
-              uid: `course-calendar-${course.number.replaceAll(
-                ' ',
-                ''
-              )}-${formatDate(d, 'yyyy-MM-dd')}@tools.calebc.co`,
-              start: toIcsTime(d, course.meetingPattern.startTime),
-              end: toIcsTime(d, course.meetingPattern.endTime),
-              title: `${course.number} - ${course.name}`,
-              location: course.location,
-            })
-          }
-          for (const subsection of course.subsections) {
-            if (subsection.meetingPattern.weekdays.includes(weekday)) {
+          for (const mp of course.meetingPatterns) {
+            if (mp.weekdays.includes(weekday)) {
               events.push({
                 uid: `course-calendar-${course.number.replaceAll(
                   ' ',
                   ''
-                )}-${subsection.name.replaceAll(' ', '')}-${formatDate(
-                  d,
-                  'yyyy-MM-dd'
-                )}@tools.calebc.co`,
-                start: toIcsTime(d, subsection.meetingPattern.startTime),
-                end: toIcsTime(d, subsection.meetingPattern.endTime),
-                title: `${course.number} - ${course.name} (${subsection.name})`,
-                location: subsection.location,
+                )}-${formatDate(d, 'yyyy-MM-dd')}@tools.calebc.co`,
+                start: toIcsTime(d, mp.startTime),
+                end: toIcsTime(d, mp.endTime),
+                title: `${course.number} - ${course.name}`,
+                location: mp.location || undefined,
               })
+            }
+          }
+          for (const subsection of course.subsections) {
+            for (const mp of subsection.meetingPatterns) {
+              if (mp.weekdays.includes(weekday)) {
+                events.push({
+                  uid: `course-calendar-${course.number.replaceAll(
+                    ' ',
+                    ''
+                  )}-${subsection.name.replaceAll(' ', '')}-${formatDate(
+                    d,
+                    'yyyy-MM-dd'
+                  )}@tools.calebc.co`,
+                  start: toIcsTime(d, mp.startTime),
+                  end: toIcsTime(d, mp.endTime),
+                  title: `${course.number} - ${course.name} (${subsection.name})`,
+                  location: mp.location || undefined,
+                })
+              }
             }
           }
         }
@@ -364,15 +244,17 @@ class Generator implements AlpineComponent<Generator> {
       return
     }
 
-    const { error, value } = ics.createEvents(events, {
+    const { error, value } = createEvents(events, {
       calName: this.calendar.name.trim() || 'Course Calendar',
       productId: '-//tools.calebc.co//' + calendarData + '//EN',
     })
     if (error) {
       this.errors = [...this.errors, error.message]
+      this.generateWarnings = warnings
       this.ical = null
     } else {
       this.errors = []
+      this.generateWarnings = warnings
       this.ical = value!
     }
   }
@@ -418,23 +300,36 @@ class Generator implements AlpineComponent<Generator> {
       class: 'info',
       duration: -1,
     })
-    const cal = await parseExcelCalendar(await file.arrayBuffer())
+    const result = await parseExcelCalendar(await file.arrayBuffer())
     loading.hide()
-    if (cal instanceof Error) {
+    if (result.error) {
       toaster.show({
-        message: cal.message,
+        title: 'Import failed',
+        message: result.error.message,
         class: 'error',
       })
       return
     }
     this.calendar.terms.splice(0, this.calendar.terms.length)
-    this.calendar.name = cal.name
-    this.calendar.terms.push(...cal.terms)
+    this.calendar.name = result.calendar.name
+    this.calendar.terms.push(...result.calendar.terms)
     ;(this.$refs.excelInput as HTMLInputElement).value = ''
-    toaster.show({
-      message: 'Import succeeded. Review and make any necessary changes below.',
-      class: 'success',
-    })
+    if (!result.warnings.length) {
+      toaster.show({
+        title: 'Import succeeded',
+        message: 'Review and make any necessary changes below.',
+        class: 'success',
+      })
+    } else {
+      toaster.show({
+        title: 'Import succeeded with warnings',
+        message: 'Review the warnings below and make any necessary changes.',
+        class: 'warning',
+        duration: 10000,
+      })
+      this.importWarnings.splice(0, this.importWarnings.length)
+      this.importWarnings.push(...result.warnings)
+    }
   }
 
   /** importIcs restores data from an .ics file into the editor. */
@@ -540,6 +435,49 @@ class Generator implements AlpineComponent<Generator> {
   scrollToTop(this: AlpineThis<Generator>): void {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  /** dismissWarning dismisses a warning. */
+  dismissWarning(this: AlpineThis<Generator>, index: number): void {
+    this.importWarnings.splice(index, 1)
+  }
+
+  isEmptyTerm(term: CalendarTerm): boolean {
+    return (
+      !term.id &&
+      !term.start &&
+      !term.end &&
+      (!term.courses.length || term.courses.every(this.isEmptyCourse))
+    )
+  }
+  isEmptyCourse(course: CalendarCourse): boolean {
+    return (
+      !course.number &&
+      !course.name &&
+      (!course.meetingPatterns.length ||
+        course.meetingPatterns.every(isEmptyMeetingPattern)) &&
+      !course.subsections.length &&
+      !course.except.length
+    )
+  }
+  isEmptySubsection(subsection: CalendarSection): boolean {
+    return (
+      !subsection.name &&
+      (!subsection.meetingPatterns.length ||
+        subsection.meetingPatterns.every(isEmptyMeetingPattern)) &&
+      !subsection.except.length
+    )
+  }
+  isEmptyException(exception: string): boolean {
+    return !exception
+  }
+  isEmptyDate(date: CalendarDate): boolean {
+    return (
+      !date.date &&
+      ((date.type === 'no-class' && !date.reason) ||
+        (date.type === 'follow' && !date.weekday))
+    )
+  }
+  isEmptyMeetingPattern = isEmptyMeetingPattern
 }
 
 export default function generator(
@@ -547,12 +485,11 @@ export default function generator(
 ): AlpineComponent<Generator> {
   return new Generator(this)
 }
-
 /**
  * toIcsDate converts a date to an array in the format [year, month, day] for
  * use with the `ics` library.
  */
-function toIcsDate(d: UTCDate): [number, number, number] {
+export function toIcsDate(d: UTCDate): [number, number, number] {
   return [d.getFullYear(), d.getMonth() + 1, d.getDate()]
 }
 
@@ -560,7 +497,7 @@ function toIcsDate(d: UTCDate): [number, number, number] {
  * toIcsTime converts a date and time to an array in the format [year, month,
  * day, hour, minute] for use with the `ics` library.
  */
-function toIcsTime(
+export function toIcsTime(
   d: UTCDate,
   time: string
 ): [number, number, number, number, number] {
@@ -572,7 +509,9 @@ function toIcsTime(
  * encodeCalendar encodes a calendar object into a string via JSON > gzip >
  * base64url encoding.
  */
-async function encodeCalendar(calendar: Calendar): Promise<string | Error> {
+export async function encodeCalendar(
+  calendar: Calendar
+): Promise<string | Error> {
   try {
     const x = new Response(
       new TextEncoder().encode(JSON.stringify(calendar))
@@ -588,7 +527,7 @@ async function encodeCalendar(calendar: Calendar): Promise<string | Error> {
  * decodeCalendar decodes a calendar object from a string via base64url decoding
  * > gunzip > JSON decoding.
  */
-async function decodeConfig(base64: string): Promise<Calendar | Error> {
+export async function decodeConfig(base64: string): Promise<Calendar | Error> {
   try {
     const x = new Response(rawBase64URLDecode(base64)).body!.pipeThrough(
       new DecompressionStream('gzip')

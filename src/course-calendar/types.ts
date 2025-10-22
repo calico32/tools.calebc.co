@@ -50,63 +50,65 @@ export interface MeetingPattern {
   startTime: string
   endTime: string
   weekdays: Weekday[]
+  location: string | null
 }
 
-export function parseMeetingPattern(
-  pattern: string
-): [MeetingPattern, string | null] | [Error] {
+export function emptyMeetingPattern(): MeetingPattern {
+  return {
+    startTime: '',
+    endTime: '',
+    weekdays: [],
+    location: null,
+  }
+}
+
+export function isEmptyMeetingPattern(mp: MeetingPattern): boolean {
+  return !mp.weekdays.length && !mp.startTime && !mp.endTime && !mp.location
+}
+
+export function parseMeetingPattern(pattern: string): MeetingPattern | Error {
   const parts = pattern.split('|')
   if (parts.length !== 2 && parts.length !== 3) {
-    return [
-      new Error(
-        `scanning MeetingPattern: expected two parts separated by '|', got ${parts.length}`
-      ),
-    ]
+    return new Error(
+      `scanning MeetingPattern: expected two parts separated by '|', got ${parts.length}`
+    )
   }
   const weekdays: Weekday[] = []
   const weekdayStrings = parts[0].split('-')
   for (const w of weekdayStrings) {
     const weekday = parseWeekday(w)
     if (weekday instanceof Error) {
-      return [new Error(`scanning MeetingPattern: invalid weekday ${w}`)]
+      return new Error(`scanning MeetingPattern: invalid weekday ${w}`)
     }
     if (weekdays.includes(weekday)) {
-      return [new Error(`scanning MeetingPattern: weekday ${w} is duplicated`)]
+      return new Error(`scanning MeetingPattern: weekday ${w} is duplicated`)
     }
     weekdays.push(weekday)
   }
   const times = parts[1].split('-')
   if (times.length !== 2) {
-    return [
-      new Error(
-        `scanning MeetingPattern: expected two times, got ${times.length}`
-      ),
-    ]
+    return new Error(
+      `scanning MeetingPattern: expected two times, got ${times.length}`
+    )
   }
   const startTime = parseTime(times[0])
   const endTime = parseTime(times[1])
   if (startTime instanceof Error || endTime instanceof Error) {
-    return [
-      new Error(
-        `scanning MeetingPattern: failed to parse time: ${startTime} ${endTime}`
-      ),
-    ]
+    return new Error(
+      `scanning MeetingPattern: failed to parse time: ${startTime} ${endTime}`
+    )
   }
   if (startTime > endTime) {
-    return [
-      new Error(
-        `scanning MeetingPattern: start time ${times[0]} after end time ${times[1]}`
-      ),
-    ]
+    return new Error(
+      `scanning MeetingPattern: start time ${times[0]} after end time ${times[1]}`
+    )
   }
-  return [
-    {
-      startTime,
-      endTime,
-      weekdays,
-    },
-    parts[2] ?? null,
-  ]
+  return {
+    startTime,
+    endTime,
+    weekdays,
+    location: parts[2]?.trim() ?? null,
+  }
 }
 
 function parseTime(time: string): string | Error {
@@ -133,16 +135,14 @@ export interface CalendarTerm {
 
 export interface CalendarSection {
   name: string
-  location: string
-  meetingPattern: MeetingPattern
+  meetingPatterns: MeetingPattern[]
   except: string[]
 }
 
 export interface CalendarCourse {
   number: string
   name: string
-  location: string
-  meetingPattern: MeetingPattern
+  meetingPatterns: MeetingPattern[]
   except: string[]
   subsections: CalendarSection[]
 }
