@@ -225,7 +225,7 @@
                   x-text="term.dates.length + ' special date' + (term.dates.length == 1 ? '' : 's')"
                 ></span>
               </summary>
-              <template x-for="(date, index) in term.dates">
+              <template x-for="(date, index) in term.dates" :key="index">
                 <div class="flex gap-2 ml-4 md:items-center">
                   <span class="font-medium text-zinc-400">on</span>
                   <div class="flex flex-col gap-2 md:contents">
@@ -320,7 +320,10 @@
                     <div class="ph ph-[trash] size-4"></div>
                   </button>
                 </div>
-                <template x-for="mp in course.meetingPatterns">
+                <template
+                  x-for="(mp, index) in course.meetingPatterns"
+                  :key="index"
+                >
                   <div
                     class="space-y-2"
                     x-data="{ mps: course.meetingPatterns }"
@@ -339,7 +342,10 @@
                   </div>
                 </template>
 
-                <template x-for="subsection in course.subsections">
+                <template
+                  x-for="(subsection, index) in course.subsections"
+                  :key="index"
+                >
                   <div
                     class="p-2 px-3 my-4 ml-4 space-y-2 rounded-md bg-zinc-600/20"
                   >
@@ -362,7 +368,10 @@
                       </button>
                     </div>
 
-                    <template x-for="(mp, index) in subsection.meetingPatterns">
+                    <template
+                      x-for="(mp, index) in subsection.meetingPatterns"
+                      :key="index"
+                    >
                       <div
                         class="space-y-2"
                         x-data="{ mps: subsection.meetingPatterns }"
@@ -391,7 +400,7 @@
                   </div>
                 </template>
 
-                <template x-for="(date, index) in course.except">
+                <template x-for="(date, index) in course.except" :key="index">
                   <div class="flex items-center gap-2 ml-4 md:items-center">
                     <span class="font-medium text-zinc-400"
                       >no meetings on</span
@@ -404,7 +413,7 @@
                     />
                     <button
                       class="flex items-center justify-center rounded-md cursor-pointer hover:text-red-400"
-                      x-on:click="if (isEmptyException(course.except[index])) confirm(`Really delete date ${date}?`)) course.except.splice(index, 1)"
+                      x-on:click="if (isEmptyException(course.except[index]) || confirm(`Really delete date ${date}?`)) course.except.splice(index, 1)"
                     >
                       <div class="ph ph-[x] size-4"></div>
                     </button>
@@ -492,7 +501,7 @@
                 >:</span
               >
             </div>
-            <template x-for="error in errors">
+            <template x-for="(error, index) in errors" :key="index + error">
               <p x-text="error"></p>
             </template>
           </div>
