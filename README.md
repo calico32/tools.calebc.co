@@ -3,3 +3,7 @@
 Tools and utilities website. Everything runs entirely in the browser.
 
 - [Course Calendar Generator](https://tools.calebc.co/course-calendar/): generate an `.ics` calendar for your course schedule
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for more information.
