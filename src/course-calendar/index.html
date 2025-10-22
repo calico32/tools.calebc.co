@@ -420,7 +420,7 @@
                   </div>
                 </template>
 
-                <div class="flex items-center gap-2 ml-4">
+                <div class="flex flex-wrap items-center gap-2 ml-4">
                   <button
                     class="flex items-center gap-2 px-3 py-1 rounded-md cursor-pointer bg-zinc-600/50 hover:bg-zinc-600"
                     x-on:click="addMeetingPattern(course)"
@@ -562,7 +562,7 @@
             <p class="mb-2 text-sm font-medium text-zinc-400">raw ICS data</p>
             <pre
               x-text="ical"
-              class="h-48 p-4 overflow-y-scroll font-mono text-xs whitespace-pre-wrap rounded-md text-zinc-200 bg-zinc-700/50"
+              class="h-48 p-4 overflow-y-scroll font-mono text-xs break-all whitespace-pre-wrap rounded-md wrap-anywhere text-zinc-200 bg-zinc-700/50"
             ></pre>
           </div>
         </template>
