@@ -148,6 +148,6 @@ export interface CalendarCourse {
 }
 
 export type CalendarDate = { date: string } & (
-  | { type: 'no-class'; reason?: string }
+  | { type: 'no-class'; reason?: string; hidden?: boolean }
   | { type: 'follow'; weekday: Weekday }
 )
