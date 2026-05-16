@@ -465,21 +465,37 @@
           </div>
         </template>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
-            x-on:click="addDefaultTerms"
-          >
-            <div class="ph ph-[plus] size-4"></div>
-            WPI 2025-2026 terms
-          </button>
-          <button
-            class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
-            x-on:click="addSummerTerms"
-          >
-            <div class="ph ph-[plus] size-4"></div>
-            WPI 2026 E term
-          </button>
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+              x-on:click="addDefaultTerms"
+            >
+              <div class="ph ph-[plus] size-4"></div>
+              <span>WPI <span x-text="currentAY"></span> terms</span>
+            </button>
+            <button
+              class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+              x-on:click="addSummerTerms"
+            >
+              <div class="ph ph-[plus] size-4"></div>
+              <span>WPI <span x-text="currentSummer"></span> term</span>
+            </button>
+          </div>
+          <template x-if="hasNextYearCalendar">
+            <div class="flex flex-wrap items-center gap-2">
+              <button class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+                x-on:click="addNextYearTerms">
+                <div class="ph ph-[plus] size-4"></div>
+                <span>WPI <span x-text="nextAY"></span> terms</span>
+              </button>
+              <button class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
+                x-on:click="addNextSummerTerms">
+                <div class="ph ph-[plus] size-4"></div>
+                <span>WPI <span x-text="nextSummer"></span> term</span>
+              </button>
+            </div>
+          </template>
           <button
             class="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-zinc-700/50 hover:bg-zinc-700"
             x-on:click="addTerm"

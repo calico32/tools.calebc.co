@@ -11,6 +11,8 @@
     "@types/alpinejs": "3.13.11",
     "@types/alpinejs__persist": "3.13.4",
     "@types/bun": "1.2.20",
+    "@types/jsdom": "^28.0.1",
+    "jsdom": "^29.0.1",
     "vite": "7.1.2",
     "vite-plugin-handlebars": "2.0.0",
     "vite-plugin-inspect": "11.3.2",

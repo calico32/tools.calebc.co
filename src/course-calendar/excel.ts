@@ -210,7 +210,7 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
         calendar = {
           name: 'Imported Course Calendar',
           year: [new Date().getFullYear(), new Date().getFullYear()],
-          range: [startDate, endDate],
+          range: [startDate.toISOString().slice(0, 10), endDate.toISOString().slice(0, 10)],
           terms: [],
         }
         isCustomCalendar = true
@@ -362,7 +362,7 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
         end = term.end
       }
     }
-    calendar.range = [new UTCDate(start), new UTCDate(end)]
+    calendar.range = [start, end]
 
     calendar.terms.sort((a, b) => a.start.localeCompare(b.start))
     for (const [i, term] of calendar!.terms.entries()) {
@@ -370,8 +370,8 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
     }
 
     calendar.year = [
-      calendar.range[0].getFullYear(),
-      calendar.range[1].getFullYear(),
+      new UTCDate(calendar.range[0]).getFullYear(),
+      new UTCDate(calendar.range[1]).getFullYear(),
     ]
   }
 
