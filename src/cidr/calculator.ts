@@ -1,5 +1,6 @@
 import type { AlpineComponent } from "alpinejs"
 import * as toaster from "x-toaster"
+
 import type { AlpineThis, Persist } from "../types"
 
 /** A normalized CIDR network. `addr` is always the network address. */
@@ -17,7 +18,7 @@ function fullMask(bits: number): bigint {
 	return (1n << BigInt(bits)) - 1n
 }
 
-/** netMask returns the bigint mask for the given prefix length. */
+/** NetMask returns the bigint mask for the given prefix length. */
 function netMask(prefix: number, bits: number): bigint {
 	if (prefix <= 0) return 0n
 	if (prefix >= bits) return fullMask(bits)
@@ -25,7 +26,7 @@ function netMask(prefix: number, bits: number): bigint {
 	return fullMask(bits) ^ ((1n << hostBits) - 1n)
 }
 
-/** parseIPv4 parses dotted-quad notation into a 32-bit value. */
+/** ParseIPv4 parses dotted-quad notation into a 32-bit value. */
 function parseIPv4(input: string): bigint | null {
 	const parts = input.split(".")
 	if (parts.length !== 4) return null
@@ -39,8 +40,7 @@ function parseIPv4(input: string): bigint | null {
 	return addr
 }
 
-/** parseIPv6 parses an IPv6 address (incl. `::` compression and embedded
- * IPv4) into a 128-bit value. */
+/** ParseIPv6 parses an IPv6 address (incl. `::` compression and embedded IPv4) into a 128-bit value. */
 function parseIPv6(input: string): bigint | null {
 	if (input === "" || input.includes("%")) return null
 	const doubleColons = input.match(/::/g)?.length ?? 0
@@ -97,8 +97,10 @@ function parseIPv6(input: string): bigint | null {
 	return addr
 }
 
-/** parseCidr parses `ip` or `ip/prefix` into a normalized {@link Net}. A
- * bare address becomes a host route (/32 or /128). */
+/**
+ * ParseCidr parses `ip` or `ip/prefix` into a normalized {@link Net}. A bare address becomes a host
+ * route (/32 or /128).
+ */
 function parseCidr(input: string): Net | { error: string } {
 	const token = input.trim()
 	if (token === "") return { error: "empty" }
@@ -118,7 +120,8 @@ function parseCidr(input: string): Net | { error: string } {
 		bits = V4_BITS
 		raw = parseIPv4(ipPart)
 	}
-	if (raw === null) return { error: `invalid ${version === 4 ? "IPv4" : "IPv6"} address "${ipPart}"` }
+	if (raw === null)
+		return { error: `invalid ${version === 4 ? "IPv4" : "IPv6"} address "${ipPart}"` }
 
 	let prefix: number
 	if (prefixPart === null) {
@@ -132,15 +135,17 @@ function parseCidr(input: string): Net | { error: string } {
 	return { version, bits, prefix, addr: raw & netMask(prefix, bits) }
 }
 
-/** contains reports whether `a` fully contains `b`. */
+/** Contains reports whether `a` fully contains `b`. */
 function contains(a: Net, b: Net): boolean {
 	if (a.version !== b.version) return false
 	if (a.prefix > b.prefix) return false
 	return (b.addr & netMask(a.prefix, a.bits)) === a.addr
 }
 
-/** subtract removes every network in `removals` from `base`, returning the
- * minimal set of CIDR blocks that cover the remainder. */
+/**
+ * Subtract removes every network in `removals` from `base`, returning the minimal set of CIDR
+ * blocks that cover the remainder.
+ */
 function subtract(base: Net, removals: Net[]): Net[] {
 	const relevant = removals.filter((r) => contains(base, r) || contains(r, base))
 	if (relevant.length === 0) return [base]
@@ -168,11 +173,12 @@ function subtract(base: Net, removals: Net[]): Net[] {
 }
 
 function formatIPv4(addr: bigint): string {
-	return [(addr >> 24n) & 0xffn, (addr >> 16n) & 0xffn, (addr >> 8n) & 0xffn, addr & 0xffn].join(".")
+	return [(addr >> 24n) & 0xffn, (addr >> 16n) & 0xffn, (addr >> 8n) & 0xffn, addr & 0xffn].join(
+		".",
+	)
 }
 
-/** formatIPv6 renders the canonical RFC 5952 form (lowercase, longest
- * zero-run compressed to `::`). */
+/** FormatIPv6 renders the canonical RFC 5952 form (lowercase, longest zero-run compressed to `::`). */
 function formatIPv6(addr: bigint): string {
 	const groups: number[] = []
 	for (let i = 7; i >= 0; i--) groups.push(Number((addr >> BigInt(i * 16)) & 0xffffn))
@@ -220,8 +226,7 @@ interface ComputeResult {
 	total: bigint
 }
 
-/** compute parses the inputs and runs the subtraction, returning everything
- * the view needs. */
+/** Compute parses the inputs and runs the subtraction, returning everything the view needs. */
 function compute(baseInput: string, excludeInput: string): ComputeResult {
 	const result: ComputeResult = {
 		error: null,
@@ -318,8 +323,6 @@ export class Calculator implements AlpineComponent<Calculator> {
 	}
 }
 
-export default function calculator(
-	this: AlpineThis<Calculator>,
-): AlpineComponent<Calculator> {
+export default function calculator(this: AlpineThis<Calculator>): AlpineComponent<Calculator> {
 	return new Calculator(this)
 }

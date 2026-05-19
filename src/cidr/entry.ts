@@ -1,8 +1,8 @@
 import "../entry-common"
-
 import persist from "@alpinejs/persist"
 import Alpine from "alpinejs"
 import * as toaster from "x-toaster"
+
 import calculator from "./calculator"
 
 toaster.init({

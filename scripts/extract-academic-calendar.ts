@@ -1,5 +1,6 @@
 import { UTCDate } from "@date-fns/utc"
 import { JSDOM } from "jsdom"
+
 import type { AcademicCalendar } from "../src/course-calendar/data"
 import type { CalendarTerm } from "../src/course-calendar/types"
 
@@ -84,7 +85,11 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 
 		const newDay = /^\d{1,2}$/.test(line) ? parseInt(line, 10) : NaN
 		if (!isNaN(newDay)) {
-			if (currentTerm && currentTerm.end && new UTCDate(currentTerm.end).getDay() === currentDay) {
+			if (
+				currentTerm &&
+				currentTerm.end &&
+				new UTCDate(currentTerm.end).getDay() === currentDay
+			) {
 				// last term just ended
 				currentTerm = null
 			}
@@ -110,7 +115,9 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 				throw new Error(`Found term start for term ${term} but month/day not set yet`)
 			}
 			if (currentDayRangeEnd !== -1) {
-				throw new Error(`Found term start for term ${term} but day range is set (not supported)`)
+				throw new Error(
+					`Found term start for term ${term} but day range is set (not supported)`,
+				)
 			}
 			const date = new UTCDate(year, currentMonth - 1, currentDay)
 			currentTerm = {
@@ -134,11 +141,18 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 				throw new Error(`Found term end for term ${term} but month/day not set yet`)
 			}
 			if (currentDayRangeEnd !== -1) {
-				throw new Error(`Found term end for term ${term} but day range is set (not supported)`)
+				throw new Error(
+					`Found term end for term ${term} but day range is set (not supported)`,
+				)
 			}
 			const date = new UTCDate(year, currentMonth - 1, currentDay)
-			if (!currentTerm || currentTerm.id !== `${term}${(year % 100).toString().padStart(2, "0")}`) {
-				throw new Error(`Found term end for term ${term} but current term is ${currentTerm?.id}`)
+			if (
+				!currentTerm ||
+				currentTerm.id !== `${term}${(year % 100).toString().padStart(2, "0")}`
+			) {
+				throw new Error(
+					`Found term end for term ${term} but current term is ${currentTerm?.id}`,
+				)
 			}
 			currentTerm.end = date.toISOString().slice(0, 10)
 			console.debug(
@@ -154,7 +168,9 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 				throw new Error(`Found e-term start for term ${term} but month/day not set yet`)
 			}
 			if (currentDayRangeEnd !== -1) {
-				throw new Error(`Found e-term start for term ${term} but day range is set (not supported)`)
+				throw new Error(
+					`Found e-term start for term ${term} but day range is set (not supported)`,
+				)
 			}
 			const date = new UTCDate(year, currentMonth - 1, currentDay)
 			currentTerm = {
@@ -178,11 +194,15 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 				throw new Error(`Found e-term end for term ${term} but month/day not set yet`)
 			}
 			if (currentDayRangeEnd !== -1) {
-				throw new Error(`Found e-term end for term ${term} but day range is set (not supported)`)
+				throw new Error(
+					`Found e-term end for term ${term} but day range is set (not supported)`,
+				)
 			}
 			const date = new UTCDate(year, currentMonth - 1, currentDay)
 			if (!currentTerm || currentTerm.id !== term) {
-				throw new Error(`Found e-term end for term ${term} but current term is ${currentTerm?.id}`)
+				throw new Error(
+					`Found e-term end for term ${term} but current term is ${currentTerm?.id}`,
+				)
 			}
 			currentTerm.end = date.toISOString().slice(0, 10)
 			console.debug(
@@ -204,7 +224,9 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 				throw new Error(`Found follow schedule for ${weekday} but month/day not set yet`)
 			}
 			if (currentDayRangeEnd !== -1) {
-				throw new Error(`Found follow schedule for ${weekday} but day range is set (not supported)`)
+				throw new Error(
+					`Found follow schedule for ${weekday} but day range is set (not supported)`,
+				)
 			}
 			const date = new UTCDate(year, currentMonth - 1, currentDay)
 			if (!currentTerm) {
@@ -226,12 +248,16 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 		if (noClassMatch || readingDayMatch) {
 			const reason = noClassMatch?.[1] || noClassMatch?.[2] || "Reading Day"
 			if (currentMonth === -1 || currentDay === -1) {
-				throw new Error(`Found no-class day for reason "${reason}" but month/day not set yet`)
+				throw new Error(
+					`Found no-class day for reason "${reason}" but month/day not set yet`,
+				)
 			}
 			if (currentDayRangeEnd === -1) {
 				const date = new UTCDate(year, currentMonth - 1, currentDay)
 				if (!currentTerm) {
-					throw new Error(`Found no-class day for reason "${reason}" but no current term is set`)
+					throw new Error(
+						`Found no-class day for reason "${reason}" but no current term is set`,
+					)
 				}
 				currentTerm.dates.push({
 					date: date.toISOString().slice(0, 10),
@@ -245,7 +271,9 @@ function parseSemester(lines: string[], year: number): CalendarTerm[] {
 				for (let day = currentDay; day <= currentDayRangeEnd; day++) {
 					const date = new UTCDate(year, currentMonth - 1, day)
 					if (!currentTerm) {
-						throw new Error(`Found no-class day for reason "${reason}" but no current term is set`)
+						throw new Error(
+							`Found no-class day for reason "${reason}" but no current term is set`,
+						)
 					}
 					currentTerm.dates.push({
 						date: date.toISOString().slice(0, 10),
