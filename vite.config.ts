@@ -60,6 +60,7 @@ export default defineConfig({
           __dirname,
           'src/course-calendar/index.html'
         ),
+        cidr: path.resolve(__dirname, 'src/cidr/index.html'),
         notFound: path.resolve(__dirname, 'src/404.html'),
       },
     },

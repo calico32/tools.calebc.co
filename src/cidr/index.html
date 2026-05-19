@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>cidr subtraction | tools.calebc.co</title>
+		<meta name="description" content="split a network into CIDR blocks with subnets excluded" />
+
+		{{>head}}
+	</head>
+	<body>
+		<main>
+			<a href="/" class="mb-1 flex items-center gap-1 text-zinc-500 hover:underline">
+				<div class="ph ph-[arrow-left] size-4"></div>
+				home
+			</a>
+			<h1 class="mb-3 text-4xl font-medium">cidr subtraction</h1>
+
+			<p class="mb-4 text-sm text-zinc-500">
+				Given a base network and a list of subnets to exclude, compute the minimal set of
+				CIDR blocks that together cover everything in the base except the excluded subnets.
+				IPv4 and IPv6 are supported. Your inputs are saved locally in your browser.
+			</p>
+
+			<div x-data="calculator" class="space-y-6">
+				<label class="flex flex-col gap-2">
+					<span class="font-medium text-zinc-400">base network</span>
+					<input
+						autocomplete="off"
+						spellcheck="false"
+						x-model="input.base"
+						placeholder="10.0.0.0/8"
+						class="rounded-md bg-zinc-700/50 px-4 py-2 font-mono"
+					/>
+				</label>
+
+				<label class="flex flex-col gap-2">
+					<span class="font-medium text-zinc-400">exclude subnets</span>
+					<span class="text-sm text-zinc-500"
+						>one per line, or separated by spaces/commas</span
+					>
+					<textarea
+						autocomplete="off"
+						spellcheck="false"
+						x-model="input.excludes"
+						placeholder="10.0.0.0/16&#10;10.64.0.0/10"
+						rows="5"
+						class="resize-y rounded-md bg-zinc-700/50 px-4 py-2 font-mono"
+					></textarea>
+				</label>
+
+				<div class="flex flex-wrap items-center gap-2">
+					<button
+						class="flex cursor-pointer items-center gap-2 rounded-md bg-zinc-600/50 px-4 py-2 hover:bg-red-500/50"
+						x-on:click="reset()"
+					>
+						<div class="ph ph-[trash] size-5"></div>
+						clear
+					</button>
+				</div>
+
+				<template x-if="notes.length">
+					<div class="space-y-1 text-sm text-zinc-400">
+						<template x-for="(note, index) in notes" :key="index">
+							<p x-text="note"></p>
+						</template>
+					</div>
+				</template>
+
+				<template x-if="error">
+					<div class="flex min-h-24 items-center gap-2 text-red-400">
+						<div class="ph ph-[x] size-4"></div>
+						<span x-text="error"></span>
+					</div>
+				</template>
+
+				<template x-if="!error">
+					<div class="min-h-24 space-y-3">
+						<div class="flex items-center gap-2 text-green-400">
+							<div class="ph ph-[check] size-4"></div>
+							<span
+								><span
+									x-text="count + ' CIDR block' + (count == 1 ? '' : 's')"
+								></span>
+								covering
+								<span x-text="total"></span> address<span x-show="total != '1'"
+									>es</span
+								></span
+							>
+						</div>
+
+						<template x-if="count">
+							<button
+								class="flex cursor-pointer items-center gap-2 rounded-md bg-sky-600/50 px-4 py-2 hover:bg-sky-500/50"
+								x-on:click="copyAll()"
+							>
+								<div class="ph ph-[clipboard] size-5"></div>
+								copy all
+							</button>
+						</template>
+
+						<template x-if="count">
+							<div
+								class="divide-y divide-zinc-700 rounded-md bg-zinc-700/50 font-mono text-sm"
+							>
+								<template x-for="(cidr, index) in cidrs" :key="index">
+									<div class="group flex items-center gap-3 px-4 py-2">
+										<span
+											x-text="index + 1"
+											class="shrink-0 text-right text-zinc-500 tabular-nums select-none"
+											:style="`width: ${String(cidrs.length).length}ch`"
+										></span>
+										<span x-text="cidr" class="flex-1 break-all"></span>
+										<button
+											class="flex shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-400 hover:text-zinc-100"
+											title="copy"
+											x-on:click="copyOne(cidr)"
+										>
+											<div class="ph ph-[clipboard] size-4"></div>
+										</button>
+									</div>
+								</template>
+							</div>
+						</template>
+
+						<template x-if="!count">
+							<p class="text-zinc-400">
+								The excluded subnets cover the entire base network — nothing
+								remains.
+							</p>
+						</template>
+					</div>
+				</template>
+
+				<template x-if="ignored.length">
+					<div class="space-y-2">
+						<div class="flex items-center gap-2 text-amber-400">
+							<div class="ph ph-[warning] size-4"></div>
+							<span
+								><span
+									x-text="ignored.length + ' ignored exclusion' + (ignored.length == 1 ? '' : 's')"
+								></span
+							></span>
+						</div>
+						<template x-for="(item, index) in ignored" :key="index">
+							<p x-text="item" class="ml-6 font-mono text-sm text-amber-100"></p>
+						</template>
+					</div>
+				</template>
+			</div>
+
+			{{>footer}}
+
+			<template x-toast-template>
+				<div
+					class="max-w-md cursor-pointer rounded-md bg-zinc-700 py-2 pr-6 pl-5 shadow-md"
+					x-close
+				>
+					<div x-title class="font-semibold text-pretty text-white"></div>
+					<div x-message class="text-pretty text-zinc-100"></div>
+				</div>
+			</template>
+		</main>
+
+		<script type="module" src="./entry.ts"></script>
+	</body>
+</html>
