@@ -108,6 +108,10 @@
 											class="shrink-0 text-right text-zinc-500 tabular-nums select-none"
 											:style="`width: ${String(cidrs.length).length}ch`"
 										></span>
+										<span
+											class="inline-block size-3 shrink-0 rounded-sm"
+											:style="`background-color: ${swatch(index, cidrs.length)}`"
+										></span>
 										<span x-text="cidr" class="flex-1 break-all"></span>
 										<button
 											class="flex shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-400 hover:text-zinc-100"
@@ -126,6 +130,52 @@
 								The excluded subnets cover the entire base network — nothing
 								remains.
 							</p>
+						</template>
+
+						<template x-if="base">
+							<div class="space-y-2">
+								<span class="text-sm font-medium text-zinc-400">visualization</span>
+								<div class="relative w-full max-w-[70ch]">
+									<canvas
+										x-effect="redraw($el)"
+										class="block w-full bg-zinc-800"
+										style="image-rendering: pixelated; aspect-ratio: 1 / 1"
+									></canvas>
+									<div
+										x-show="hover"
+										style="display: none"
+										class="pointer-events-none absolute z-10 max-w-xs rounded-md border border-zinc-700 bg-zinc-900/95 px-3 py-2 text-xs shadow-lg"
+										:style="hover && `left: ${hover.x + (hover.x > 240 ? -12 : 12)}px; top: ${hover.y + 12}px; transform: translateX(${hover.x > 240 ? '-100%' : '0'})`"
+									>
+										<div class="mb-1 flex items-center gap-2">
+											<span
+												class="rounded-sm px-1.5 py-0.5 text-[10px] font-medium uppercase"
+												:class="hover && hover.kind === 'excluded' ? 'bg-zinc-700 text-zinc-300' : 'bg-sky-600/40 text-sky-100'"
+												x-text="hover && hover.kind"
+											></span>
+											<span
+												class="font-mono"
+												x-text="hover && hover.cidr"
+											></span>
+										</div>
+										<div class="text-zinc-400">
+											<span x-text="hover && hover.count"></span> address<span
+												x-show="hover && hover.count !== '1'"
+												>es</span
+											>
+										</div>
+										<div class="mt-1 font-mono text-zinc-300">
+											<div x-text="hover && hover.first"></div>
+											<div x-text="hover && hover.last"></div>
+										</div>
+									</div>
+								</div>
+								<p class="text-xs text-zinc-500">
+									Hilbert-curve mapping of
+									<span x-text="formatBase()" class="font-mono"></span>. Excluded
+									subnets shown in dark grey. Hover for details.
+								</p>
+							</div>
 						</template>
 					</div>
 				</template>

@@ -2,9 +2,11 @@ import type { AlpineComponent } from "alpinejs"
 import * as toaster from "x-toaster"
 
 import type { AlpineThis, Persist } from "../types"
+import { colorFor } from "./color"
+import type { HilbertSegment, HilbertView } from "./hilbert"
 
 /** A normalized CIDR network. `addr` is always the network address. */
-interface Net {
+export interface Net {
 	version: 4 | 6
 	bits: 32 | 128
 	prefix: number
@@ -172,6 +174,10 @@ function subtract(base: Net, removals: Net[]): Net[] {
 	return [...l, ...r]
 }
 
+export function formatAddr(addr: bigint, version: 4 | 6): string {
+	return version === 4 ? formatIPv4(addr) : formatIPv6(addr)
+}
+
 function formatIPv4(addr: bigint): string {
 	return [(addr >> 24n) & 0xffn, (addr >> 16n) & 0xffn, (addr >> 8n) & 0xffn, addr & 0xffn].join(
 		".",
@@ -208,7 +214,7 @@ function formatIPv6(addr: bigint): string {
 	return `${head}::${tail}`
 }
 
-function formatNet(net: Net): string {
+export function formatNet(net: Net): string {
 	const ip = net.version === 4 ? formatIPv4(net.addr) : formatIPv6(net.addr)
 	return `${ip}/${net.prefix}`
 }
@@ -219,6 +225,9 @@ function netSize(net: Net): bigint {
 
 interface ComputeResult {
 	error: string | null
+	base: Net | null
+	remainder: Net[]
+	removals: Net[]
 	cidrs: string[]
 	ignored: string[]
 	notes: string[]
@@ -230,6 +239,9 @@ interface ComputeResult {
 function compute(baseInput: string, excludeInput: string): ComputeResult {
 	const result: ComputeResult = {
 		error: null,
+		base: null,
+		remainder: [],
+		removals: [],
 		cidrs: [],
 		ignored: [],
 		notes: [],
@@ -250,6 +262,7 @@ function compute(baseInput: string, excludeInput: string): ComputeResult {
 	if (formatNet(base) !== baseInput.trim()) {
 		result.notes.push(`Base normalized to ${formatNet(base)}.`)
 	}
+	result.base = base
 
 	const removals: Net[] = []
 	for (const token of excludeInput.split(/[\s,]+/).filter(Boolean)) {
@@ -270,20 +283,40 @@ function compute(baseInput: string, excludeInput: string): ComputeResult {
 	}
 
 	const remainder = subtract(base, removals)
+	result.remainder = remainder
+	result.removals = removals
 	result.cidrs = remainder.map(formatNet)
 	result.count = remainder.length
 	result.total = remainder.reduce((sum, n) => sum + netSize(n), 0n)
 	return result
 }
 
+interface HoverInfo {
+	kind: "remainder" | "excluded"
+	cidr: string
+	count: string
+	first: string
+	last: string
+	x: number
+	y: number
+}
+
 export class Calculator implements AlpineComponent<Calculator> {
 	input: Persist<{ base: string; excludes: string }>
 	error: string | null = null
+	base: Net | null = null
+	remainder: Net[] = []
+	removals: Net[] = []
 	cidrs: string[] = []
 	ignored: string[] = []
 	notes: string[] = []
 	count = 0
 	total = "0"
+	hover: HoverInfo | null = null
+
+	view: HilbertView | null = null
+	currentCanvas: HTMLCanvasElement | null = null
+	currentSeg: HilbertSegment | null = null
 
 	constructor(alpine: AlpineThis<Calculator>) {
 		this.input = alpine.$persist({ base: "", excludes: "" })
@@ -297,11 +330,69 @@ export class Calculator implements AlpineComponent<Calculator> {
 	recompute(this: AlpineThis<Calculator>): void {
 		const r = compute(this.input.base, this.input.excludes)
 		this.error = r.error
+		this.base = r.base
+		this.remainder = r.remainder
+		this.removals = r.removals
 		this.cidrs = r.cidrs
 		this.ignored = r.ignored
 		this.notes = r.notes
 		this.count = r.count
 		this.total = r.total.toLocaleString("en-US")
+	}
+
+	async redraw(this: AlpineThis<Calculator>, canvas: HTMLCanvasElement): Promise<void> {
+		if (!this.base) return
+		const { renderHilbert } = await import("./hilbert")
+		const view = renderHilbert(canvas, this.base, this.remainder, this.removals)
+		this.view = view
+		this.currentSeg = null
+		this.hover = null
+		if (this.currentCanvas !== canvas) {
+			this.currentCanvas = canvas
+			canvas.addEventListener("mousemove", (e) => this.onHilbertMove(e))
+			canvas.addEventListener("mouseleave", () => this.onHilbertLeave())
+		}
+	}
+
+	onHilbertMove(this: AlpineThis<Calculator>, e: MouseEvent): void {
+		if (!this.view || !this.base) return
+		const canvas = e.currentTarget as HTMLCanvasElement
+		const rect = canvas.getBoundingClientRect()
+		const offsetX = e.clientX - rect.left
+		const offsetY = e.clientY - rect.top
+		const seg = this.view.segmentAt(offsetX, offsetY)
+		if (seg !== this.currentSeg) {
+			this.currentSeg = seg
+			this.view.setHighlight(seg)
+		}
+		if (!seg) {
+			this.hover = null
+			return
+		}
+		const size = seg.end - seg.start
+		this.hover = {
+			kind: seg.kind,
+			cidr: formatNet(seg.net),
+			count: size.toLocaleString("en-US"),
+			first: formatAddr(seg.start, this.base.version),
+			last: formatAddr(seg.end - 1n, this.base.version),
+			x: offsetX,
+			y: offsetY,
+		}
+	}
+
+	onHilbertLeave(this: AlpineThis<Calculator>): void {
+		if (this.view) this.view.setHighlight(null)
+		this.currentSeg = null
+		this.hover = null
+	}
+
+	swatch(index: number, length: number): string {
+		return colorFor(index, length)
+	}
+
+	formatBase(): string {
+		return this.base ? formatNet(this.base) : ""
 	}
 
 	reset(this: AlpineThis<Calculator>): void {
