@@ -237,6 +237,7 @@ export class Generator implements AlpineComponent<Generator> {
 								end: toIcsTime(d, mp.endTime),
 								title: `${course.number} - ${course.name}`,
 								location: mp.location || undefined,
+								description: buildDescription(course),
 							})
 						}
 					}
@@ -255,6 +256,7 @@ export class Generator implements AlpineComponent<Generator> {
 									end: toIcsTime(d, mp.endTime),
 									title: `${course.number} - ${course.name} (${subsection.name})`,
 									location: mp.location || undefined,
+									description: buildDescription(subsection),
 								})
 							}
 						}
@@ -515,6 +517,19 @@ export class Generator implements AlpineComponent<Generator> {
 export default function generator(this: AlpineThis<Generator>): AlpineComponent<Generator> {
 	return new Generator(this)
 }
+
+/** buildDescription builds a description string for a course or subsection. */
+function buildDescription(course: CalendarCourse | CalendarSection): string | undefined {
+	const parts: string[] = []
+	if (course.section) {
+		parts.push(`Section: ${course.section}`)
+	}
+	if (course.instructor) {
+		parts.push(`Instructor: ${course.instructor}`)
+	}
+	return parts.length ? parts.join("\n") : undefined
+}
+
 /**
  * toIcsDate converts a date to an array in the format [year, month, day] for use with the `ics`
  * library.
