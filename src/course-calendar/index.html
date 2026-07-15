@@ -68,7 +68,7 @@
 						</g>
 					</g>
 				</svg>
-				<em>Export to Excel</em> button in the blue header. Download the .xlsx file and use
+				<em>Export to Excel</em> button in the red header. Download the .xlsx file and use
 				the button below to import it.
 			</p>
 			<p class="mb-1 text-sm text-zinc-500">
@@ -302,6 +302,13 @@
 									<input
 										autocomplete="off"
 										type="text"
+										x-model="course.section"
+										placeholder="section"
+										class="w-20 rounded-md bg-zinc-600/50 px-3 py-1"
+									/>
+									<input
+										autocomplete="off"
+										type="text"
 										x-model="course.name"
 										placeholder="course name"
 										class="w-36 flex-1 rounded-md bg-zinc-600/50 px-3 py-1"
@@ -313,6 +320,16 @@
 										<div class="ph ph-[trash] size-4"></div>
 									</button>
 								</div>
+								<label class="ml-4 flex items-center gap-2">
+									<span class="font-medium text-zinc-400">instructor</span>
+									<input
+										autocomplete="off"
+										type="text"
+										x-model="course.instructor"
+										placeholder="instructor"
+										class="w-80 rounded-md bg-zinc-600/50 px-3 py-1"
+									/>
+								</label>
 								<template
 									x-for="(mp, index) in course.meetingPatterns"
 									:key="index"
@@ -347,6 +364,13 @@
 												<input
 													autocomplete="off"
 													type="text"
+													x-model="subsection.section"
+													placeholder="section"
+													class="w-20 rounded-md bg-zinc-600/50 px-3 py-1"
+												/>
+												<input
+													autocomplete="off"
+													type="text"
 													x-model="subsection.name"
 													placeholder="type"
 													class="flex-1 rounded-md bg-zinc-600/50 px-3 py-1"
@@ -359,6 +383,18 @@
 												<div class="ph ph-[x] size-4"></div>
 											</button>
 										</div>
+										<label class="ml-4 flex items-center gap-2">
+											<span class="font-medium text-zinc-400"
+												>instructor</span
+											>
+											<input
+												autocomplete="off"
+												type="text"
+												x-model="subsection.instructor"
+												placeholder="instructor"
+												class="w-80 rounded-md bg-zinc-600/50 px-3 py-1"
+											/>
+										</label>
 
 										<template
 											x-for="(mp, index) in subsection.meetingPatterns"

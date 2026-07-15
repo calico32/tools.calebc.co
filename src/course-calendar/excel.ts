@@ -16,16 +16,17 @@ interface CourseData {
 	courseSection: string
 	registrationStatus: string
 	instructionalFormat: string
+	instructor: string
 	meetingPatterns: MeetingPattern[]
 	startDate: UTCDate
 	endDate: UTCDate
 }
 
 /**
- * ParseExcelCalendar parses an Excel file exported from Workday into a calendar object. It only
+ * parseExcelCalendar parses an Excel file exported from Workday into a calendar object. It only
  * processes enrolled and completed courses and ignores others. It supports WPI exports only.
  *
- * ParseExcelCalendar dynamically imports xlsx (~500KB of js). If it is known that the user is
+ * parseExcelCalendar dynamically imports xlsx (~500KB of js). If it is known that the user is
  * calling this function ahead of time, it is recommended to import xlsx inline as `import('xlsx')`
  * to start the download early.
  */
@@ -116,8 +117,9 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 			index.meetingPatterns = row.indexOf("Meeting Patterns")
 			index.startDate = row.indexOf("Start Date")
 			index.endDate = row.indexOf("End Date")
+			index.instructor = row.indexOf("Instructor")
 
-			if (Object.values(index).some((v) => v == null || v == -1)) {
+			if (Object.values(requiredIndices(index)).some((v) => v == null || v == -1)) {
 				console.warn(`Warning: row ${i + 1}: missing indices for section ${sectionType}`)
 				console.warn(row)
 				console.warn(index)
@@ -131,7 +133,10 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 			continue
 		}
 
-		if (!sectionType || Object.values(index).some((v) => v == null || v == -1)) {
+		if (
+			!sectionType ||
+			Object.values(requiredIndices(index)).some((v) => v == null || v == -1)
+		) {
 			console.debug("Skipping row", i + 1)
 			continue
 		}
@@ -140,6 +145,18 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 		const courseSection = row[index.courseSection]
 		const registrationStatus = row[index.registrationStatus]
 		const instructionalFormat = row[index.instructionalFormat]
+		const instructor = (index.instructor === -1 ? "" : (row[index.instructor] ?? "")).trim()
+
+		// skip bookkeeping courses
+		if (courseNameNumber && isBookkeepingCourse(courseNameNumber.split(" - ")[0])) {
+			console.debug(`Skipping bookkeeping course ${courseNameNumber}`)
+			warnings.push({
+				title: `Skipped ${courseNameNumber}`,
+				message:
+					"This course is used for registrar bookkeeping and was intentionally left out of the calendar.",
+			})
+			continue
+		}
 		const meetingPatterns =
 			row[index.meetingPatterns]?.split("\n").filter(Boolean).map(parseMeetingPattern) ?? []
 		const startDate = parse(
@@ -254,15 +271,20 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 			continue
 		}
 
-		const [courseNumber, courseName] = courseNameNumber.split(" - ")
+		const [courseNumber, courseName] = courseNameNumber.split(" - ", 2)
 
-		if (instructionalFormat !== "Lecture" && instructionalFormat !== "Workshop") {
+		if (
+			instructionalFormat !== "Lecture" &&
+			instructionalFormat !== "Workshop" &&
+			instructionalFormat !== "Seminar"
+		) {
 			pendingSubsections.push({
 				term,
 				courseNameNumber,
 				courseSection,
 				registrationStatus,
 				instructionalFormat,
+				instructor,
 				meetingPatterns: meetingPatterns as MeetingPattern[],
 				startDate,
 				endDate,
@@ -273,6 +295,8 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 		const course: CalendarCourse = {
 			name: courseName,
 			number: courseNumber,
+			section: extractSectionCode(courseSection),
+			instructor,
 			meetingPatterns: meetingPatterns as MeetingPattern[],
 			subsections: [],
 			except: [],
@@ -289,7 +313,7 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 
 	// process pending subsections
 	for (const s of pendingSubsections) {
-		const [courseNumber, courseName] = s.courseNameNumber.split(" - ")
+		const [courseNumber, courseName] = s.courseNameNumber.split(" - ", 2)
 
 		const name = extractSubsectionName(s.courseSection)
 
@@ -307,14 +331,16 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 
 		course.subsections.push({
 			name,
+			section: extractSectionCode(s.courseSection),
+			instructor: s.instructor,
 			meetingPatterns: s.meetingPatterns,
 			except: [],
 		})
 	}
 
-	// remove empty terms
-	calendar!.terms = calendar!.terms.filter((t) => t.courses.length > 0)
-	if (!calendar!.terms.length) {
+	const totalCourses = calendar!.terms.reduce((acc, term) => acc + term.courses.length, 0)
+	console.debug(`Parsed ${totalCourses} courses across ${calendar!.terms.length} terms`)
+	if (totalCourses === 0) {
 		return {
 			error: new Error("No courses found. Check that your export is from the correct page."),
 		}
@@ -362,8 +388,24 @@ export async function parseExcelCalendar(xlsxData: any): Promise<
 
 const cellAddressRegex = /([A-Z]+)([0-9]+)/
 
+/**
+ * isBookkeepingCourse reports whether a course number is a registrar bookkeeping entry that
+ * shouldn't appear on the calendar: "XX 4999" or "PC 1000".
+ */
+export function isBookkeepingCourse(courseNumber: string): boolean {
+	return /^[A-Z]+ 4999$/.test(courseNumber) || courseNumber === "PC 1000"
+}
+
+/**
+ * extractSectionCode extracts the section code from a Workday course section string, e.g. "CH
+ * 1020-DL01 - Chemical Reactions" → "DL01".
+ */
+function extractSectionCode(courseSection: string): string {
+	return courseSection.split(" - ", 2)[0].split("-")[1] ?? ""
+}
+
 function extractSubsectionName(courseSection: string) {
-	let name = courseSection.split(" - ")[0].split("-")[1]
+	let name = extractSectionCode(courseSection)
 	if (name[0] === "A" || name[0] === "B" || name[0] === "C" || name[0] === "D") {
 		name =
 			{
@@ -377,7 +419,7 @@ function extractSubsectionName(courseSection: string) {
 }
 
 /**
- * FixSheetRef fixes the !ref property of a sheet to match the actual sheet range. It mutates the
+ * fixSheetRef fixes the !ref property of a sheet to match the actual sheet range. It mutates the
  * sheet object in-place and returns it.
  */
 function fixSheetRef(sheet: Sheet): Sheet {
@@ -401,7 +443,7 @@ function fixSheetRef(sheet: Sheet): Sheet {
 }
 
 /**
- * SheetHeader returns an array ['0', '1', '2', ...] large enough to address all columns in the
+ * sheetHeader returns an array ['0', '1', '2', ...] large enough to address all columns in the
  * sheet.
  */
 function sheetHeader(sheet: Sheet): string[] {
@@ -425,7 +467,7 @@ function sheetHeader(sheet: Sheet): string[] {
 }
 
 /**
- * SheetToArray converts a sheet to a 2D array of strings. Numbers and dates are represented as
+ * sheetToArray converts a sheet to a 2D array of strings. Numbers and dates are represented as
  * strings, with dates formatted as MM/DD/YY.
  */
 async function sheetToArray(sheet: Sheet): Promise<(string | null)[][]> {
@@ -447,7 +489,7 @@ async function sheetToArray(sheet: Sheet): Promise<(string | null)[][]> {
 	return rows as any
 }
 
-/** DefaultIndices returns the default indices for the indices object. */
+/** defaultIndices returns the default indices for the indices object. */
 function defaultIndices() {
 	return {
 		courseNameNumber: -1,
@@ -457,5 +499,14 @@ function defaultIndices() {
 		meetingPatterns: -1,
 		startDate: -1,
 		endDate: -1,
+		instructor: -1,
 	}
+}
+
+/** requiredIndices returns the indices that must be present for a row to be parseable. */
+function requiredIndices({
+	instructor: _instructor,
+	...required
+}: ReturnType<typeof defaultIndices>) {
+	return required
 }

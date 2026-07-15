@@ -63,7 +63,7 @@ export class Generator implements AlpineComponent<Generator> {
 		this.generateICal()
 	}
 
-	/** Reset resets the calendar to its initial state. */
+	/** reset resets the calendar to its initial state. */
 	reset(this: AlpineThis<Generator>): void {
 		this.calendar = { name: "", terms: [] }
 		this.importWarnings = []
@@ -72,7 +72,7 @@ export class Generator implements AlpineComponent<Generator> {
 		this.errors = []
 	}
 
-	/** AddTerm adds an empty term to the calendar. */
+	/** addTerm adds an empty term to the calendar. */
 	addTerm(this: AlpineThis<Generator>): void {
 		this.calendar.terms.push({
 			id: "",
@@ -83,42 +83,44 @@ export class Generator implements AlpineComponent<Generator> {
 		})
 	}
 
-	/** AddDefaultTerms adds the default WPI AY terms to the calendar. */
+	/** addDefaultTerms adds the default WPI AY terms to the calendar. */
 	addDefaultTerms(this: AlpineThis<Generator>): void {
 		this.calendar.terms.push(...academicCalendars[currentCalendar].terms)
 	}
 
-	/** AddSummerTerms adds the default WPI E terms to the calendar. */
+	/** addSummerTerms adds the default WPI E terms to the calendar. */
 	addSummerTerms(this: AlpineThis<Generator>): void {
 		this.calendar.terms.push(...academicCalendars[currentSummerCalendar].terms)
 	}
 
-	/** AddNextTerms adds the next AY terms to the calendar. */
+	/** addNextTerms adds the next AY terms to the calendar. */
 	addNextYearTerms(this: AlpineThis<Generator>): void {
 		if (nextCalendar) {
 			this.calendar.terms.push(...academicCalendars[nextCalendar].terms)
 		}
 	}
 
-	/** AddNextSummerTerms adds the next E terms to the calendar. */
+	/** addNextSummerTerms adds the next E terms to the calendar. */
 	addNextSummerTerms(this: AlpineThis<Generator>): void {
 		if (nextSummerCalendar) {
 			this.calendar.terms.push(...academicCalendars[nextSummerCalendar].terms)
 		}
 	}
 
-	/** AddCourse adds an empty course to the given term. */
+	/** addCourse adds an empty course to the given term. */
 	addCourse(this: AlpineThis<Generator>, term: CalendarTerm): void {
 		term.courses.push({
 			name: "",
 			number: "",
+			section: "",
+			instructor: "",
 			meetingPatterns: [emptyMeetingPattern()],
 			except: [],
 			subsections: [],
 		})
 	}
 
-	/** AddMeetingPattern adds an empty meeting pattern to the given course/subsection. */
+	/** addMeetingPattern adds an empty meeting pattern to the given course/subsection. */
 	addMeetingPattern(
 		this: AlpineThis<Generator>,
 		component: CalendarCourse | CalendarSection,
@@ -126,7 +128,7 @@ export class Generator implements AlpineComponent<Generator> {
 		component.meetingPatterns.push(emptyMeetingPattern())
 	}
 
-	/** AddSpecialDate adds a special date to the given term. */
+	/** addSpecialDate adds a special date to the given term. */
 	addSpecialDate(this: AlpineThis<Generator>, term: CalendarTerm): void {
 		term.dates.push({ date: "", type: "no-class", reason: "" })
 		const details = this.$refs.details as HTMLDetailsElement
@@ -135,16 +137,18 @@ export class Generator implements AlpineComponent<Generator> {
 		}
 	}
 
-	/** AddSubsection adds an empty subsection to the given course. */
+	/** addSubsection adds an empty subsection to the given course. */
 	addSubsection(this: AlpineThis<Generator>, course: CalendarCourse): void {
 		course.subsections.push({
 			name: "",
+			section: "",
+			instructor: "",
 			meetingPatterns: [emptyMeetingPattern()],
 			except: [],
 		})
 	}
 
-	/** ToggleWeekday toggles the weekday for the given meeting pattern. */
+	/** toggleWeekday toggles the weekday for the given meeting pattern. */
 	toggleWeekday(this: AlpineThis<Generator>, weekday: Weekday, mp: MeetingPattern): void {
 		if (mp.weekdays.includes(weekday)) {
 			mp.weekdays = mp.weekdays.filter((w) => w !== weekday)
@@ -153,17 +157,17 @@ export class Generator implements AlpineComponent<Generator> {
 		}
 	}
 
-	/** AddMinutes adds minutes to the given time string. */
+	/** addMinutes adds minutes to the given time string. */
 	addMinutes(this: AlpineThis<Generator>, time: string, minutes: number): string {
 		if (!time) return "00:00"
 		const t = addMinutes(new Date("2025-01-01 " + time + ":00"), minutes)
 		return formatDate(t, "HH:mm")
 	}
 
-	/** WeekdayToString converts a weekday to a string. */
+	/** weekdayToString converts a weekday to a string. */
 	weekdayToString = weekdayToString
 
-	/** GenerateICal generates an .ics file from the calendar and stores it. */
+	/** generateICal generates an .ics file from the calendar and stores it. */
 	async generateICal(this: AlpineThis<Generator>): Promise<void> {
 		const { errors, warnings } = validate(this.calendar)
 		if (errors.length) {
@@ -280,7 +284,7 @@ export class Generator implements AlpineComponent<Generator> {
 		}
 	}
 
-	/** SelectExcelFile prompts the user to select an Excel file. */
+	/** selectExcelFile prompts the user to select an Excel file. */
 	selectExcelFile(this: AlpineThis<Generator>): void {
 		// begin loading the xlsx library while the user selects the file
 		import("xlsx")
@@ -293,7 +297,7 @@ export class Generator implements AlpineComponent<Generator> {
 		this.$refs.excelInput.click()
 	}
 
-	/** SelectIcsFile prompts the user to select an .ics file. */
+	/** selectIcsFile prompts the user to select an .ics file. */
 	selectIcsFile(this: AlpineThis<Generator>): void {
 		// begin loading the ical.js library while the user selects the file
 		import("ical.js")
@@ -306,7 +310,7 @@ export class Generator implements AlpineComponent<Generator> {
 		this.$refs.icsInput.click()
 	}
 
-	/** ImportExcel imports an Excel file into the calendar. */
+	/** importExcel imports an Excel file into the calendar. */
 	async importExcel(this: AlpineThis<Generator>): Promise<void> {
 		const file = (this.$refs.excelInput as HTMLInputElement).files?.[0]
 		if (!file) {
@@ -353,7 +357,7 @@ export class Generator implements AlpineComponent<Generator> {
 		}
 	}
 
-	/** ImportIcs restores data from an .ics file into the editor. */
+	/** importIcs restores data from an .ics file into the editor. */
 	async importIcs(this: AlpineThis<Generator>): Promise<void> {
 		const { default: ical } = await import("ical.js")
 		const file = (this.$refs.icsInput as HTMLInputElement).files?.[0]
@@ -368,7 +372,7 @@ export class Generator implements AlpineComponent<Generator> {
 		let cal: unknown
 		try {
 			cal = ical.parse(data)
-		} catch (e) {
+		} catch {
 			toaster.show({
 				message: "Invalid .ics file.",
 				class: "error",
@@ -411,7 +415,7 @@ export class Generator implements AlpineComponent<Generator> {
 		})
 	}
 
-	/** CopyICal copies the current .ics file to the clipboard. */
+	/** copyICal copies the current .ics file to the clipboard. */
 	copyICal(this: AlpineThis<Generator>): void {
 		navigator.clipboard.writeText(this.ical ?? "")
 		toaster.show({
@@ -437,7 +441,7 @@ export class Generator implements AlpineComponent<Generator> {
 		})
 	}
 
-	/** ScrollToBottom scrolls the editor to the bottom. */
+	/** scrollToBottom scrolls the editor to the bottom. */
 	scrollToBottom(this: AlpineThis<Generator>): void {
 		window.scrollTo({
 			top: document.body.scrollHeight,
@@ -445,12 +449,12 @@ export class Generator implements AlpineComponent<Generator> {
 		})
 	}
 
-	/** ScrollToTop scrolls the editor to the top. */
+	/** scrollToTop scrolls the editor to the top. */
 	scrollToTop(this: AlpineThis<Generator>): void {
 		window.scrollTo({ top: 0, behavior: "smooth" })
 	}
 
-	/** DismissWarning dismisses a warning. */
+	/** dismissWarning dismisses a warning. */
 	dismissWarning(this: AlpineThis<Generator>, index: number): void {
 		this.importWarnings.splice(index, 1)
 	}
@@ -467,6 +471,8 @@ export class Generator implements AlpineComponent<Generator> {
 		return (
 			!course.number &&
 			!course.name &&
+			!course.section &&
+			!course.instructor &&
 			(!course.meetingPatterns.length ||
 				course.meetingPatterns.every(isEmptyMeetingPattern)) &&
 			!course.subsections.length &&
@@ -476,6 +482,8 @@ export class Generator implements AlpineComponent<Generator> {
 	isEmptySubsection(subsection: CalendarSection): boolean {
 		return (
 			!subsection.name &&
+			!subsection.section &&
+			!subsection.instructor &&
 			(!subsection.meetingPatterns.length ||
 				subsection.meetingPatterns.every(isEmptyMeetingPattern)) &&
 			!subsection.except.length
@@ -498,7 +506,7 @@ export default function generator(this: AlpineThis<Generator>): AlpineComponent<
 	return new Generator(this)
 }
 /**
- * ToIcsDate converts a date to an array in the format [year, month, day] for use with the `ics`
+ * toIcsDate converts a date to an array in the format [year, month, day] for use with the `ics`
  * library.
  */
 export function toIcsDate(d: UTCDate): [number, number, number] {
@@ -506,7 +514,7 @@ export function toIcsDate(d: UTCDate): [number, number, number] {
 }
 
 /**
- * ToIcsTime converts a date and time to an array in the format [year, month, day, hour, minute] for
+ * toIcsTime converts a date and time to an array in the format [year, month, day, hour, minute] for
  * use with the `ics` library.
  */
 export function toIcsTime(d: UTCDate, time: string): [number, number, number, number, number] {
@@ -514,7 +522,7 @@ export function toIcsTime(d: UTCDate, time: string): [number, number, number, nu
 	return [d.getFullYear(), d.getMonth() + 1, d.getDate(), h, m]
 }
 
-/** EncodeCalendar encodes a calendar object into a string via JSON > gzip > base64url encoding. */
+/** encodeCalendar encodes a calendar object into a string via JSON > gzip > base64url encoding. */
 export async function encodeCalendar(calendar: Calendar): Promise<string | Error> {
 	try {
 		const x = new Response(
@@ -528,9 +536,8 @@ export async function encodeCalendar(calendar: Calendar): Promise<string | Error
 }
 
 /**
- * DecodeCalendar decodes a calendar object from a string via base64url decoding
- *
- * > Gunzip > JSON decoding.
+ * decodeCalendar decodes a calendar object from a string via base64url decoding > Gunzip > JSON
+ * decoding.
  */
 export async function decodeConfig(base64: string): Promise<Calendar | Error> {
 	try {
@@ -544,7 +551,7 @@ export async function decodeConfig(base64: string): Promise<Calendar | Error> {
 	}
 }
 
-/** RawBase64URLEncode encodes an ArrayBuffer into a base64url string without padding. */
+/** rawBase64URLEncode encodes an ArrayBuffer into a base64url string without padding. */
 function rawBase64URLEncode(arrayBuffer: ArrayBuffer): string {
 	return new Uint8Array(arrayBuffer).toBase64({
 		alphabet: "base64url",
@@ -552,7 +559,7 @@ function rawBase64URLEncode(arrayBuffer: ArrayBuffer): string {
 	})
 }
 
-/** RawBase64URLDecode decodes a base64url string into an ArrayBuffer without padding. */
+/** rawBase64URLDecode decodes a base64url string into an ArrayBuffer without padding. */
 function rawBase64URLDecode(base64: string): ArrayBuffer {
 	return Uint8Array.fromBase64(base64, { alphabet: "base64url" }).buffer
 }

@@ -123,6 +123,8 @@ export interface CalendarTerm {
 
 export interface CalendarSection {
 	name: string
+	section?: string
+	instructor?: string
 	meetingPatterns: MeetingPattern[]
 	except: string[]
 }
@@ -130,6 +132,8 @@ export interface CalendarSection {
 export interface CalendarCourse {
 	number: string
 	name: string
+	section?: string
+	instructor?: string
 	meetingPatterns: MeetingPattern[]
 	except: string[]
 	subsections: CalendarSection[]
