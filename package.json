@@ -4,10 +4,12 @@
 	"scripts": {
 		"build": "vite build",
 		"dev": "vite",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@alpinejs/persist": "3.14.9",
+		"@bgotink/kdl": "^0.4.0",
 		"@date-fns/utc": "^2.1.1",
 		"alpinejs": "3.14.9",
 		"date-fns": "^4.1.0",
@@ -29,7 +31,8 @@
 		"vite": "7.1.2",
 		"vite-plugin-handlebars": "2.0.0",
 		"vite-plugin-inspect": "11.3.2",
-		"vite-plugin-pwa": "1.0.2"
+		"vite-plugin-pwa": "1.0.2",
+		"vitest": "^4.1.10"
 	},
 	"peerDependencies": {
 		"typescript": "5.9.2"

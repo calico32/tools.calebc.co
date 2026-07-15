@@ -1,11 +1,13 @@
 {
-    "ignorePatterns": ["**/node_modules/**/*", "**/dist/**/*"],
-    "$schema": "./node_modules/oxfmt/configuration_schema.json",
-    "printWidth": 100,
-    "jsdoc": true,
-    "semi": false,
-    "sortImports": true,
-    "sortTailwindcss": true,
-    "useTabs": true,
-    "tabWidth": 4
+	"ignorePatterns": ["**/node_modules/**/*", "**/dist/**/*"],
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"printWidth": 100,
+	"jsdoc": {
+		"capitalizeDescriptions": false
+	},
+	"semi": false,
+	"sortImports": true,
+	"sortTailwindcss": true,
+	"useTabs": true,
+	"tabWidth": 4
 }

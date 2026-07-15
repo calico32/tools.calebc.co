@@ -424,7 +424,17 @@ export class Generator implements AlpineComponent<Generator> {
 		})
 	}
 
-	/** DownloadICal downloads the current .ics file. */
+	/** copyKdl copies the calendar as a KDL document to the clipboard. */
+	async copyKdl(this: AlpineThis<Generator>): Promise<void> {
+		const { calendarToKdl } = await import("./kdl.ts")
+		await navigator.clipboard.writeText(calendarToKdl(this.calendar))
+		toaster.show({
+			message: "Copied to clipboard.",
+			class: "success",
+		})
+	}
+
+	/** downloadICal downloads the current .ics file. */
 	downloadICal(this: AlpineThis<Generator>): void {
 		const file = new Blob([this.ical ?? ""], {
 			type: "text/calendar",
